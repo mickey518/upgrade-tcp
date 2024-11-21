@@ -1,0 +1,94 @@
+package lab.dragon.modbus;
+
+import com.serotonin.modbus4j.serial.SerialPortWrapper;
+import jssc.SerialPort;
+import jssc.SerialPortException;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+
+@Slf4j
+public class SerialPortWrapperImpl implements SerialPortWrapper {
+    private final SerialPort port;
+    private final int baudRate;
+    private final int dataBits;
+    private final int stopBits;
+    private final int parity;
+//    private final int flowControlIn;
+//    private final int flowControlOut;
+
+    public SerialPortWrapperImpl(String commPortId, int baudRate, int dataBits, int stopBits, int parity, int flowControlIn,
+                                 int flowControlOut) {
+
+        this.baudRate = baudRate;
+        this.dataBits = dataBits;
+        this.stopBits = stopBits;
+        this.parity = parity;
+//        this.flowControlIn = flowControlIn;
+//        this.flowControlOut = flowControlOut;
+
+        port = new SerialPort(commPortId);
+
+    }
+
+    @Override
+    public void close() throws Exception {
+        port.closePort();
+        log.debug("Serial port {} closed", port.getPortName());
+    }
+
+    @Override
+    public void open() throws SerialPortException {
+        try {
+            port.openPort();
+            port.setParams(this.getBaudRate(), this.getDataBits(), this.getStopBits(), this.getParity());
+            log.debug("Serial port {} opened", port.getPortName());
+        } catch (SerialPortException e) {
+            log.error("Error opening port : {} for {} ", port.getPortName(), e.getMessage());
+            throw e;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "SerialPortWrapperImpl{" +
+                "port=" + port.getPortName() +
+                ", baudRate=" + baudRate +
+                ", dataBits=" + dataBits +
+                ", stopBits=" + stopBits +
+                ", parity=" + parity +
+                '}';
+    }
+
+    @Override
+    public InputStream getInputStream() {
+        return new SerialInputStream(port);
+    }
+
+    @Override
+    public OutputStream getOutputStream() {
+        return new SerialOutputStream(port);
+    }
+
+
+    @Override
+    public int getBaudRate() {
+        return baudRate;
+    }
+
+    @Override
+    public int getDataBits() {
+        return dataBits;
+    }
+
+    @Override
+    public int getStopBits() {
+        return stopBits;
+    }
+
+    @Override
+    public int getParity() {
+        return parity;
+    }
+}
