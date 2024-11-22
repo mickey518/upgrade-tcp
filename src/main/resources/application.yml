@@ -11,6 +11,8 @@ logging:
     console: utf-8
   level:
     root: info
+    com:
+      serotonin: debug
   file:
     name: logs/${spring.application.name}.log
   pattern:

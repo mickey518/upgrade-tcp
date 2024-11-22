@@ -15,7 +15,6 @@ import lab.dragon.config.SensorProperty;
 import lab.dragon.config.SensorPropertyConfig;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.util.ByteUtils;
-import lab.dragon.util.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -53,19 +52,19 @@ public class ModbusUtil {
     /**
      * 读取寄存器中的值
      *
-     * @param start   开始内存地址
-     * @param len     读取的长度
+     * @param start 开始内存地址
+     * @param len   读取的长度
      * @return ReadHoldingRegistersResponse 对象
      * @throws ModbusTransportException
      */
     public byte[] readHoldingRegisters(int start, int len) throws ModbusTransportException {
 
         ConnectionWebSocket.lock.writeLock().lock();
-        log.info("[lock] read func locked. {}", ConnectionWebSocket.lock);
+//        log.info("[lock] read func locked. {}", ConnectionWebSocket.lock);
         try {
             ReadHoldingRegistersRequest request = new ReadHoldingRegistersRequest(this.serialPortConfig.getSlaveId(), start, len);
 
-            log.info("this.master: {}", this.master);
+//            log.info("this.master: {}", this.master);
 
             ReadHoldingRegistersResponse response = (ReadHoldingRegistersResponse) this.master.send(request);
 
@@ -76,18 +75,16 @@ public class ModbusUtil {
             return response.getData();
         } finally {
             ConnectionWebSocket.lock.writeLock().unlock();
-            log.info("[lock] read func unlocked. {}", ConnectionWebSocket.lock);
+//            log.info("[lock] read func unlocked. {}", ConnectionWebSocket.lock);
         }
     }
 
     public void writeRegister(int offset, int value) throws ModbusTransportException {
 
         ConnectionWebSocket.lock.writeLock().lock();
-        log.info("[lock] write func locked. {}", ConnectionWebSocket.lock);
+//        log.info("[lock] write func locked. {}", ConnectionWebSocket.lock);
         try {
             WriteRegisterRequest request = new WriteRegisterRequest(this.serialPortConfig.getSlaveId(), offset, value);
-
-            log.info("this.master: {}", this.master);
 
             WriteRegisterResponse response = (WriteRegisterResponse) this.master.send(request);
 
@@ -99,7 +96,7 @@ public class ModbusUtil {
             }
         } finally {
             ConnectionWebSocket.lock.writeLock().unlock();
-            log.info("[lock] write func unlocked. {}", ConnectionWebSocket.lock);
+//            log.info("[lock] write func unlocked. {}", ConnectionWebSocket.lock);
 
         }
     }
@@ -109,7 +106,6 @@ public class ModbusUtil {
         Map<Integer, Object> result = new HashMap<>(propertyList.size());
         for (int i = 0; i < propertyList.size(); i++) {
             byte[] bytes = readHoldingRegisters(this.serialPortConfig.getStartIndex() + propertyList.get(i).getAddress(), propertyList.get(i).getLength() / 2);
-            log.debug("read bytes: [{}] [{}] {}", propertyList.get(i).getSlaveId(), this.serialPortConfig.getStartIndex() + propertyList.get(i).getAddress(), ByteBufUtil.hexDump(bytes));
             switch (propertyList.get(i).getAClass().getSimpleName()) {
                 case "float":
                     float aFloat = ByteUtils.bytes2Float(bytes);
@@ -150,7 +146,6 @@ public class ModbusUtil {
                     break;
             }
         }
-        log.info("读取串口寄存器数据: {}", JsonUtils.encodeJson(result));
         return result;
     }
 

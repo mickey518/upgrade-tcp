@@ -6,6 +6,7 @@ import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.exception.ModbusTransportException;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
+import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
 import lab.dragon.modbus.SerialPortWrapperImpl;
@@ -13,10 +14,9 @@ import lab.dragon.util.ByteUtils;
 import lab.dragon.util.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.websocket.Session;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class ModbusWorker implements Runnable {
@@ -24,14 +24,11 @@ public class ModbusWorker implements Runnable {
     private String portId;
     private ModbusMaster master;
     private int slaveId;
-    private final Session session;
 
-//    private ModbusWorker() {}
-
-    public ModbusWorker(SerialPortConfig serialPortConfig, Session session) throws ModbusInitException {
+    public ModbusWorker(SerialPortConfig serialPortConfig) throws ModbusInitException {
         this.portId = serialPortConfig.getCommPortId();
         this.slaveId = serialPortConfig.getSlaveId();
-        this.session = session;
+
         SerialPortWrapperImpl serialPortWrapper = new SerialPortWrapperImpl(serialPortConfig.getCommPortId(),
                 serialPortConfig.getBaudRate(),
                 serialPortConfig.getDataBits(),
@@ -57,19 +54,25 @@ public class ModbusWorker implements Runnable {
             } else {
                 byte[] responseData = response.getData();
                 byte[] bytes = new byte[4];
-                System.arraycopy(responseData, 0, bytes, 0, 4);
-                float aFloat4 = ByteUtils.bytes2Float(bytes);
-                System.arraycopy(responseData, 4, bytes, 0, 4);
-                float aFloat6 = ByteUtils.bytes2Float(bytes);
-
                 Map<Integer, Object> result = new HashMap<>(2);
-                result.put(4, aFloat4);
-                result.put(6, aFloat6);
 
-                session.getBasicRemote().sendText(JsonUtils.encodeJson(WsConnectMessage.builder().type("result-sensor").json(JsonUtils.encodeJson(result)).build()));
+                if (responseData.length >= 4) {
+                    System.arraycopy(responseData, 0, bytes, 0, bytes.length);
+                    int anInt4 = ByteUtils.bytes2IntBigEndian(bytes);
+                    float aFloat4 = anInt4 / 1000.0f;
+                    result.put(4, aFloat4);
+                }
+                if (responseData.length >= 8) {
+                    System.arraycopy(responseData, bytes.length, bytes, 0, bytes.length);
+                    int anInt6 = ByteUtils.bytes2IntBigEndian(bytes);
+                    result.put(6, anInt6);
+                }
+
+                log.info("传感器数据：{}", JsonUtils.encodeJson(result));
+                ConnectionWebSocket.SEND_MESSAGE_QUEUE.put(JsonUtils.encodeJson(WsConnectMessage.builder().type("result-sensor").json(JsonUtils.encodeJson(result)).build()));
             }
 
-        } catch (ModbusTransportException | IOException e) {
+        } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
     }
