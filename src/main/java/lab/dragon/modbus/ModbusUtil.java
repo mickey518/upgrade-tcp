@@ -15,16 +15,17 @@ import lab.dragon.config.SensorProperty;
 import lab.dragon.config.SensorPropertyConfig;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.util.ByteUtils;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 public class ModbusUtil {
 
+    private static final Logger log = LoggerFactory.getLogger(ModbusUtil.class);
     private final SerialPortConfig serialPortConfig;
     private final ModbusMaster master;
 
@@ -60,11 +61,8 @@ public class ModbusUtil {
     public byte[] readHoldingRegisters(int start, int len) throws ModbusTransportException {
 
         ConnectionWebSocket.lock.writeLock().lock();
-//        log.info("[lock] read func locked. {}", ConnectionWebSocket.lock);
         try {
             ReadHoldingRegistersRequest request = new ReadHoldingRegistersRequest(this.serialPortConfig.getSlaveId(), start, len);
-
-//            log.info("this.master: {}", this.master);
 
             ReadHoldingRegistersResponse response = (ReadHoldingRegistersResponse) this.master.send(request);
 
@@ -75,14 +73,12 @@ public class ModbusUtil {
             return response.getData();
         } finally {
             ConnectionWebSocket.lock.writeLock().unlock();
-//            log.info("[lock] read func unlocked. {}", ConnectionWebSocket.lock);
         }
     }
 
     public void writeRegister(int offset, int value) throws ModbusTransportException {
 
         ConnectionWebSocket.lock.writeLock().lock();
-//        log.info("[lock] write func locked. {}", ConnectionWebSocket.lock);
         try {
             WriteRegisterRequest request = new WriteRegisterRequest(this.serialPortConfig.getSlaveId(), offset, value);
 
@@ -96,8 +92,6 @@ public class ModbusUtil {
             }
         } finally {
             ConnectionWebSocket.lock.writeLock().unlock();
-//            log.info("[lock] write func unlocked. {}", ConnectionWebSocket.lock);
-
         }
     }
 

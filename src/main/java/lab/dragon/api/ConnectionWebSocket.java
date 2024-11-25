@@ -3,14 +3,14 @@ package lab.dragon.api;
 import com.google.gson.JsonSyntaxException;
 import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.exception.ModbusTransportException;
-import lab.dragon.Main;
 import lab.dragon.ModbusWorker;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
 import lab.dragon.modbus.ModbusUtil;
 import lab.dragon.util.DateTimeUtils;
 import lab.dragon.util.JsonUtils;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -32,10 +32,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
-@Slf4j
 @Component
 @ServerEndpoint("/ws")
 public class ConnectionWebSocket {
+    private final Logger log = LoggerFactory.getLogger(ConnectionWebSocket.class);
+
+    /**
+     * websocket发送数据队列
+     */
     public static final LinkedBlockingQueue<String> SEND_MESSAGE_QUEUE = new LinkedBlockingQueue<>();
 
     public static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -55,17 +59,35 @@ public class ConnectionWebSocket {
      */
     private ModbusUtil servoModbusUtil;
     /**
-     * 传感器modbus控制模块
+     * 读取伺服控制器的定时线程
      */
-    private ModbusUtil sensorModbusUtil;
-    private ScheduledFuture<?> scheduledReadWarnFuture;
+    private ScheduledFuture<?> scheduledReadServoFuture;
+    /**
+     * 读取传感器数据的定时线程
+     */
     private ScheduledFuture<?> scheduledReadSensorFuture;
+    private ScheduledFuture<?> scheduleSendTestFuture;
     private SerialPortConfig sensorPortConfig;
+    private ModbusWorker modbusWorker;
+    /**
+     * 报警信息代码映射表
+     */
+    private Map<String, String> warnMessages;
 
+    /**
+     * spring 注入完成后调用的，相当于构造函数
+     */
     @PostConstruct
     public void onComponent() {
         if (Files.notExists(commPortConfigFile)) {
             String error = "缺少配置文件 [com-port.txt]，需要提供串口配置文件；配置文件中第一个表示伺服控制器串口，第二个表示传感器串口";
+            log.error(error);
+        }
+        // 加载告警代码含义转换映射表
+        try {
+            warnMessages = JsonUtils.loadFromFile("warn.json", Map.class);
+        } catch (IOException e) {
+            String error = "缺少报警信息转换映射表 warn.json";
             log.error(error);
         }
     }
@@ -106,11 +128,11 @@ public class ConnectionWebSocket {
 
         try {
             // 创建一个定时获取传感器数据的计划线程
-            ModbusWorker modbusWorker = new ModbusWorker(sensorPortConfig);
-            this.scheduledReadSensorFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
+            this.modbusWorker = new ModbusWorker(sensorPortConfig);
+            this.scheduledReadSensorFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
 
 
-            Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
+            this.scheduleSendTestFuture = Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
                 try {
                     if (!SEND_MESSAGE_QUEUE.isEmpty()) {
                         String take = SEND_MESSAGE_QUEUE.take();
@@ -121,18 +143,13 @@ public class ConnectionWebSocket {
                 }
             }, 0, 5, TimeUnit.MILLISECONDS);
 
-//            // 读取伺服控制器寄存器中的参数
-//            if (servoModbusUtil != null) {
-//                readServoValues();
-//            }
-
             // 定时获取伺服控制器报警记录的定时线程
-            this.scheduledReadWarnFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            this.scheduledReadServoFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
                 // 读取伺服报警记录
                 try {
                     readServoValues();
                     readServoWarns();
-                } catch (ModbusTransportException | IOException e) {
+                } catch (ModbusTransportException | InterruptedException e) {
                     log.error(e.getMessage(), e);
                 }
 
@@ -157,12 +174,6 @@ public class ConnectionWebSocket {
         try {
             WsConnectMessage wsConnectMessage = JsonUtils.decodeJson(msg, WsConnectMessage.class);
 
-            // 配置串口信息
-//            if ("config".equals(wsConnectMessage.getType())) {
-//
-//            } else if ("read".equals(wsConnectMessage.getType())) {
-////                log.info("received read command: {}", wsConnectMessage.getJson());
-//            } else
             if ("write".equals(wsConnectMessage.getType())) {
                 log.info("received write command: {}", wsConnectMessage.getJson());
                 Map<String, Integer> map = JsonUtils.decodeJson(wsConnectMessage.getJson(), Map.class);
@@ -171,9 +182,6 @@ public class ConnectionWebSocket {
                     servoModbusUtil.writeRegister(key < 1000 ? key + 10000 : key, (int) entry.getValue());
                 }
 
-//                Thread.sleep(100);
-//
-//                log.info("读取伺服电机的值. ");
                 readServoValues();
 
             } else if ("savelog".equals(wsConnectMessage.getType())) {
@@ -197,26 +205,24 @@ public class ConnectionWebSocket {
             String error = "websocket发送数据错误，错误消息：" + e.getMessage();
             log.error(error, e);
             SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
+        } catch (InterruptedException e) {
+            String error = "向发送websocket队列写入数据错误，错误消息：" + e.getMessage();
+            log.error(error, e);
+            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
         }
-//        catch (InterruptedException e) {
-//            String error = "错误消息：" + e.getMessage();
-//            log.error(error, e);
-//            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
-//        }
     }
 
     /**
      * 读取寄存器中的值
      *
-     * @throws IOException
      * @throws ModbusTransportException
      */
-    private void readServoValues() throws IOException, ModbusTransportException {
+    private void readServoValues() throws ModbusTransportException, InterruptedException {
         Map<Integer, Object> result = servoModbusUtil.readServoValues();
-        SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("result").json(JsonUtils.encodeJson(result)).build()));
+        SEND_MESSAGE_QUEUE.put(JsonUtils.encodeJson(WsConnectMessage.builder().type("result").json(JsonUtils.encodeJson(result)).build()));
     }
 
-    private void readServoWarns() throws IOException, ModbusTransportException {
+    private void readServoWarns() throws ModbusTransportException, InterruptedException {
         List<String> warnStrings = new ArrayList<>();
 
         if (servoModbusUtil != null) {
@@ -229,7 +235,7 @@ public class ConnectionWebSocket {
                     warnCode = String.valueOf(tmp);
                     if (!"0".equals(warnCode)) {
                         // 转换错误码
-                        String msg = Main.WARN_MESSAGES.get(warnCode);
+                        String msg = warnMessages.get(warnCode);
                         warnStrings.add(msg);
                     }
                 }
@@ -238,7 +244,7 @@ public class ConnectionWebSocket {
 
 
         if (!warnStrings.isEmpty()) {
-            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("warn").json(JsonUtils.encodeJson(warnStrings)).build()));
+            SEND_MESSAGE_QUEUE.put(JsonUtils.encodeJson(WsConnectMessage.builder().type("warn").json(JsonUtils.encodeJson(warnStrings)).build()));
         }
     }
 
@@ -256,14 +262,22 @@ public class ConnectionWebSocket {
     @OnClose
     public void onClosing() {
 
-        if (this.scheduledReadWarnFuture != null) {
-            this.scheduledReadWarnFuture.cancel(false);
+        // 关闭伺服获取数据参数定时线程
+        if (this.scheduledReadServoFuture != null) {
+            this.scheduledReadServoFuture.cancel(false);
         }
+        this.servoModbusUtil.close();
+
         if (this.scheduledReadSensorFuture != null) {
             this.scheduledReadSensorFuture.cancel(false);
         }
-        this.sensorModbusUtil.close();
-        this.servoModbusUtil.close();
+        if (this.modbusWorker != null) {
+            this.modbusWorker.close();
+        }
+
+        if (this.scheduleSendTestFuture != null) {
+            this.scheduleSendTestFuture.cancel(false);
+        }
 
         log.info("[ws]断开连接：{}，连接总量：{}", this.session.getId(), onlineCount.addAndGet(-1));
         try {

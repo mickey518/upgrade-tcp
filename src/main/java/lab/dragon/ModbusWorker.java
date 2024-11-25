@@ -3,7 +3,6 @@ package lab.dragon;
 import com.serotonin.modbus4j.ModbusFactory;
 import com.serotonin.modbus4j.ModbusMaster;
 import com.serotonin.modbus4j.exception.ModbusInitException;
-import com.serotonin.modbus4j.exception.ModbusTransportException;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import lab.dragon.api.ConnectionWebSocket;
@@ -12,18 +11,18 @@ import lab.dragon.entity.WsConnectMessage;
 import lab.dragon.modbus.SerialPortWrapperImpl;
 import lab.dragon.util.ByteUtils;
 import lab.dragon.util.JsonUtils;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
-@Slf4j
 public class ModbusWorker implements Runnable {
+    private final Logger log = LoggerFactory.getLogger(ModbusWorker.class);
 
-    private String portId;
-    private ModbusMaster master;
-    private int slaveId;
+    private final String portId;
+    private final ModbusMaster master;
+    private final int slaveId;
 
     public ModbusWorker(SerialPortConfig serialPortConfig) throws ModbusInitException {
         this.portId = serialPortConfig.getCommPortId();
@@ -50,7 +49,7 @@ public class ModbusWorker implements Runnable {
 
             if (response.isException()) {
                 log.error("[modbus][{}]读取保持寄存器错误，错误信息是: {}", this.portId, response.getExceptionMessage());
-                throw new RuntimeException(response.getExceptionMessage());
+//                throw new RuntimeException(response.getExceptionMessage());
             } else {
                 byte[] responseData = response.getData();
                 byte[] bytes = new byte[4];
@@ -75,5 +74,11 @@ public class ModbusWorker implements Runnable {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    public void close() {
+        log.info("[modbus][{}]关闭连接。", this.portId);
+        this.master.setConnected(false);
+        this.master.destroy();
     }
 }
