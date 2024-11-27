@@ -5,7 +5,7 @@ public class SerialPortConfig {
     /**
      * 端口名称
      */
-    private String commPortId = "COM1";
+    private String commPortId;
     /**
      * 波特率
      */
