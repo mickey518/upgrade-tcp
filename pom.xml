@@ -23,6 +23,10 @@
         <rxtx.version>2.1.7</rxtx.version>
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <main-class>lab.dragon.Main</main-class>
+        <netty.version>4.1.115.Final</netty.version>
+        <tomcat.version>11.0.0</tomcat.version>
+        <snakeyaml.version>2.0</snakeyaml.version>
+        <spring-framework.version>6.1.14</spring-framework.version>
     </properties>
 
     <dependencies>
@@ -30,6 +34,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- webSocket -->
         <dependency>
