@@ -185,7 +185,7 @@ public class ConnectionWebSocket {
                 readServoValues();
 
             } else if ("savelog".equals(wsConnectMessage.getType())) {
-                Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("log-", ".txt"));
+                Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("操作记录-", ".txt"));
                 Files.createFile(logPath);
                 Files.write(logPath, wsConnectMessage.getJson().getBytes(StandardCharsets.UTF_8));
             }

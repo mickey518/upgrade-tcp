@@ -24,7 +24,6 @@
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <main-class>lab.dragon.Main</main-class>
         <netty.version>4.1.115.Final</netty.version>
-        <snakeyaml.version>2.0</snakeyaml.version>
     </properties>
 
     <dependencies>
