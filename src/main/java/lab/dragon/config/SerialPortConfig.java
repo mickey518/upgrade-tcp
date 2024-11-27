@@ -23,9 +23,6 @@ public class SerialPortConfig {
      */
     private Integer parity = 0;
 
-    private Integer flowControlIn = 0;
-    private Integer flowControlOut = 0;
-
     private Integer slaveId = 1;
     private Integer startIndex = 0;
 
@@ -72,22 +69,6 @@ public class SerialPortConfig {
 
     public void setParity(Integer parity) {
         this.parity = parity;
-    }
-
-    public Integer getFlowControlIn() {
-        return flowControlIn;
-    }
-
-    public void setFlowControlIn(Integer flowControlIn) {
-        this.flowControlIn = flowControlIn;
-    }
-
-    public Integer getFlowControlOut() {
-        return flowControlOut;
-    }
-
-    public void setFlowControlOut(Integer flowControlOut) {
-        this.flowControlOut = flowControlOut;
     }
 
     public Integer getSlaveId() {

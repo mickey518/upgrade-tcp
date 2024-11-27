@@ -6,7 +6,8 @@ import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import com.serotonin.modbus4j.msg.WriteRegisterRequest;
 import com.serotonin.modbus4j.msg.WriteRegisterResponse;
-import gnu.io.SerialPort;
+//import gnu.io.SerialPort;
+import jssc.SerialPort;
 import lab.dragon.modbus.SerialPortWrapperImpl;
 
 import java.util.Arrays;
@@ -21,7 +22,7 @@ public class RtuMasterDemo {
 
         // 设置串口参数，串口是COM1，波特率是9600
         SerialPortWrapperImpl wrapper = new SerialPortWrapperImpl("COM4", 115200,
-                SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE, 0, 0);
+                SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
         ModbusFactory modbusFactory = new ModbusFactory();
 
 

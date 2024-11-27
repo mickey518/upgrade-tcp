@@ -1,12 +1,17 @@
 package lab.dragon.config;
 
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.List;
 
-@Getter
-@Setter
+
 public class SeriaPortProperties {
     private List<SerialPortConfig> serialPortConfigList;
+
+    public List<SerialPortConfig> getSerialPortConfigList() {
+        return serialPortConfigList;
+    }
+
+    public void setSerialPortConfigList(List<SerialPortConfig> serialPortConfigList) {
+        this.serialPortConfigList = serialPortConfigList;
+    }
 }

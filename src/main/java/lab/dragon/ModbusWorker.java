@@ -32,9 +32,7 @@ public class ModbusWorker implements Runnable {
                 serialPortConfig.getBaudRate(),
                 serialPortConfig.getDataBits(),
                 serialPortConfig.getStopBits(),
-                serialPortConfig.getParity(),
-                serialPortConfig.getFlowControlIn(),
-                serialPortConfig.getFlowControlOut());
+                serialPortConfig.getParity());
         ModbusFactory modbusFactory = new ModbusFactory();
         this.master = modbusFactory.createRtuMaster(serialPortWrapper);
         this.master.init();

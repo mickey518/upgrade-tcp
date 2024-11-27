@@ -1,7 +1,6 @@
 package lab.dragon.util;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
-import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.PreDestroy;
 import java.util.concurrent.*;
@@ -12,7 +11,6 @@ import java.util.concurrent.*;
  * @author xuejingbao
  * @create 2022-01-10 14:05
  */
-@Slf4j
 public class ThreadPoolUtil {
 
     /**
@@ -77,7 +75,6 @@ public class ThreadPoolUtil {
         } else {
             synchronized (ThreadPoolUtil.class) {
                 if (threadPool == null) {
-                    log.error("thread pool is null");
                     threadPool = new ThreadPoolExecutor(10,
                             10,
                             60,

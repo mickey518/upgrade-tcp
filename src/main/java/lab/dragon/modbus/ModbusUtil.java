@@ -31,7 +31,7 @@ public class ModbusUtil {
 
     public ModbusUtil(SerialPortConfig serialPortConfig) throws ModbusInitException {
         this.serialPortConfig = serialPortConfig;
-        SerialPortWrapperImpl serialPortWrapper = new SerialPortWrapperImpl(this.serialPortConfig.getCommPortId(), this.serialPortConfig.getBaudRate(), this.serialPortConfig.getDataBits(), this.serialPortConfig.getStopBits(), this.serialPortConfig.getParity(), this.serialPortConfig.getFlowControlIn(), this.serialPortConfig.getFlowControlOut());
+        SerialPortWrapperImpl serialPortWrapper = new SerialPortWrapperImpl(this.serialPortConfig.getCommPortId(), this.serialPortConfig.getBaudRate(), this.serialPortConfig.getDataBits(), this.serialPortConfig.getStopBits(), this.serialPortConfig.getParity());
         ModbusFactory modbusFactory = new ModbusFactory();
         this.master = modbusFactory.createRtuMaster(serialPortWrapper);
         log.info("[modbus][{}]初始化串口连接；{}", this.serialPortConfig.getCommPortId(), serialPortWrapper.toString());

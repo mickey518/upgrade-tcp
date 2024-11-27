@@ -3,30 +3,26 @@ package lab.dragon.modbus;
 import com.serotonin.modbus4j.serial.SerialPortWrapper;
 import jssc.SerialPort;
 import jssc.SerialPortException;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 
-@Slf4j
 public class SerialPortWrapperImpl implements SerialPortWrapper {
+    private static final Logger log = LoggerFactory.getLogger(SerialPortWrapperImpl.class);
     private final SerialPort port;
     private final int baudRate;
     private final int dataBits;
     private final int stopBits;
     private final int parity;
-//    private final int flowControlIn;
-//    private final int flowControlOut;
 
-    public SerialPortWrapperImpl(String commPortId, int baudRate, int dataBits, int stopBits, int parity, int flowControlIn,
-                                 int flowControlOut) {
+    public SerialPortWrapperImpl(String commPortId, int baudRate, int dataBits, int stopBits, int parity) {
 
         this.baudRate = baudRate;
         this.dataBits = dataBits;
         this.stopBits = stopBits;
         this.parity = parity;
-//        this.flowControlIn = flowControlIn;
-//        this.flowControlOut = flowControlOut;
 
         port = new SerialPort(commPortId);
 
