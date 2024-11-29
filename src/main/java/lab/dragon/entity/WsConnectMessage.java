@@ -1,6 +1,7 @@
 package lab.dragon.entity;
 
 public class WsConnectMessage {
+
     private WsConnectMessageEnum type;
 
     private String json;
@@ -8,6 +9,14 @@ public class WsConnectMessage {
     private WsConnectMessage(Builder builder) {
         this.type = builder.type;
         this.json = builder.json;
+    }
+
+    @Override
+    public String toString() {
+        return "WsConnectMessage{" +
+                "type=" + type +
+                ", json='" + json + '\'' +
+                '}';
     }
 
     public static class Builder {

@@ -7,6 +7,7 @@ import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import com.serotonin.modbus4j.msg.WriteRegisterRequest;
 import com.serotonin.modbus4j.msg.WriteRegisterResponse;
 import jssc.SerialPort;
+import lab.dragon.common.util.ByteUtils;
 import lab.dragon.modbus.SerialPortWrapperImpl;
 
 import java.util.Arrays;
@@ -14,7 +15,15 @@ import java.util.Arrays;
 public class RtuMasterDemo {
 
     public static void main(String[] args) throws Exception{
-        createRtuMaster();
+//        createRtuMaster();
+
+        long summed = ByteUtils.sum(new byte[]{(byte) 0xAA, (byte) 0x13, (byte) 0x09, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0xE8, (byte) 0x03,
+                (byte) 0xE8, (byte) 0x08, (byte) 0x16, (byte) 0x16,
+                (byte) 0x16, (byte) 0x16, (byte) 0x16, (byte) 0x16,
+                (byte) 0x16, (byte) 0x16, (byte) 0x55
+        });
+        System.out.println("sum: " + summed + "; 0xFF is: " + String.format("%02X", (byte)(0xFF & summed)));
     }
 
     private static void createRtuMaster() throws Exception{

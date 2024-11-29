@@ -1,23 +1,27 @@
 package lab.dragon.entity;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * @author mickey.wang
  */
 public enum WsConnectMessageEnum {
-
-    write("write"),
-    writeBatt("write-batt"),
-    result("result"),
-    resultSensor("result-sensor"),
-    resultBatt("result-batt"),
-    savelog("savelog"),
-    warn("warn"),
-    error("error");
-
-
-    private final String type;
-
-    WsConnectMessageEnum(String type) {
-        this.type = type;
-    }
+    @SerializedName("write")
+    write,
+    @SerializedName("write-batt")
+    writeBatt,
+    @SerializedName("write-mode")
+    writeMode,
+    @SerializedName("result")
+    result,
+    @SerializedName("result-sensor")
+    resultSensor,
+    @SerializedName("result-batt")
+    resultBatt,
+    @SerializedName("savelog")
+    savelog,
+    @SerializedName("warn")
+    warn,
+    @SerializedName("error")
+    error;
 }

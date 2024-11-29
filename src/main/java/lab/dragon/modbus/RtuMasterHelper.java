@@ -54,12 +54,37 @@ public class RtuMasterHelper {
             throw new RuntimeException("serial port is not open.");
         }
 
-        // 获取输入流
-        InputStream inputStream = serialPort.getInputStream();
+        /*
+         0  0xAA    帧头
+         1  0x13    长度
+         2  0x     校验和
+         3  0x00    error
+         4  0x00    bms报错1
+         5  0x00    bms报错2
+         6  0xE8    编码器速度低位
+         7  0x03    编码器速度高位
+         8  0xE8    霍尔速度低位
+         9  0x03    霍尔速度高位
+         10 0x16    驱动器温度
+         11 0x16    电机温度
+         12 0x16    电池电压低位
+         13 0x16    电池电压高位
+         14 0x16    电池容量
+         15 0x16    电流
+         16 0x16    电池温度1
+         17 0x16    电池温度2
+         18 0x55    帧尾
+         */
 
-        // 监听接收的数据
-        byte[] buffer = new byte[1024];  // 缓冲区
-        int bytesRead;
+        // 监听接收的数据 todo 这里是测试数据，是要删除掉的额
+        byte[] buffer = new byte[] {(byte) 0xAA, (byte) 0x13, (byte) 0x9D, (byte) 0x00,
+                (byte) 0x00, (byte) 0x00, (byte) 0xE8, (byte) 0x03,
+                (byte) 0xE8, (byte) 0x08, (byte) 0x16, (byte) 0x16,
+                (byte) 0x16, (byte) 0x16, (byte) 0x16, (byte) 0x16,
+                (byte) 0x16, (byte) 0x16, (byte) 0x55
+        };
+        //  todo 这里是测试数据，是要删除掉的额
+        int bytesRead = 19;
 
         log.info("[主控板]开始接收数据...");
 
@@ -67,7 +92,10 @@ public class RtuMasterHelper {
         while (true) {
             try {
                 // 从串口输入流读取数据
-                bytesRead = inputStream.read(buffer);
+                // 获取输入流  todo 这里是测试数据，是要放开下面两行的
+//                InputStream inputStream = serialPort.getInputStream();
+//                bytesRead = inputStream.read(buffer);
+
                 if (bytesRead > 0) {
                     // 处理接收到的数据
                     log.info("[主控板]接收到数据: {}", ByteBufUtil.hexDump(buffer));
@@ -81,8 +109,10 @@ public class RtuMasterHelper {
                     }
 
                 }
+                //  todo 这里是测试数据，是要删除掉的额
+                Thread.sleep(100);
             } catch (Exception e) {
-                System.out.println("读取数据时发生错误: " + e.getMessage());
+                log.error("[主控板] 读取数据错误，错误消息： {}", e.getMessage(), e);
                 break;
             }
         }
@@ -168,7 +198,7 @@ public class RtuMasterHelper {
         // 电池温度2
         result.put("battTemp2", battTemp2);
 
-        ConnectionWebSocket.SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.result).json(GsonUtils.toJson(result)).build()));
+        ConnectionWebSocket.SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.resultBatt).json(GsonUtils.toJson(result)).build()));
     }
 
     public void writeSpd(Integer spd) throws IOException {
@@ -188,18 +218,14 @@ public class RtuMasterHelper {
         bytes[6] = 0;
         bytes[7] = 0;
 
-        bytes[2] = (byte) ((byte)0xFF & ByteUtils.sum(bytes));
-
-        OutputStream outputStream = this.serialPort.getOutputStream();
-        outputStream.write(bytes);
-        outputStream.flush();
+        writeCommand(bytes);
     }
 
     /**
      * 下发指令，切换至调试模式
      * @throws IOException
      */
-    public void writeDebugMode() throws IOException {
+    public void writeMode(int mode) throws IOException {
         /*
         0     1     2     3    4
         帧头  长度  检验和 模式  帧尾
@@ -210,10 +236,15 @@ public class RtuMasterHelper {
         bytes[bytes.length - 1] = (byte) 0x55;
         bytes[1] = (byte) bytes.length;
         bytes[2] = 0;
-        bytes[3] = 0;
+        bytes[3] = (byte) mode;
 
+        writeCommand(bytes);
+    }
+
+    private void writeCommand(byte[] bytes) throws IOException {
         bytes[2] = (byte) ((byte)0xFF & ByteUtils.sum(bytes));
 
+        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.hexString(bytes));
         OutputStream outputStream = this.serialPort.getOutputStream();
         outputStream.write(bytes);
         outputStream.flush();

@@ -202,7 +202,7 @@ public class ConnectionWebSocket {
 
         try {
             WsConnectMessage wsConnectMessage = GsonUtils.fromJson(msg, WsConnectMessage.class);
-
+            log.info("{}", wsConnectMessage.toString());
             if (WsConnectMessageEnum.write.equals(wsConnectMessage.getType())) {
                 log.info("received write command: {}", wsConnectMessage.getJson());
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
@@ -218,6 +218,10 @@ public class ConnectionWebSocket {
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
                 this.masterHelper.writeSpd(map.get("spd"));
+            }  else if (WsConnectMessageEnum.writeMode.equals(wsConnectMessage.getType())) {
+                Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
+                // 下发速度参数
+                this.masterHelper.writeMode(map.get("mode"));
             } else if (WsConnectMessageEnum.savelog.equals(wsConnectMessage.getType())) {
                 Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("操作记录-", ".txt"));
                 Files.createFile(logPath);
