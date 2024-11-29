@@ -1,8 +1,11 @@
 package lab.dragon.api;
 
+import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortInvalidPortException;
 import com.google.gson.JsonSyntaxException;
 import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.exception.ModbusTransportException;
+import jssc.SerialPortException;
 import lab.dragon.ModbusWorker;
 import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.config.SerialPortConfig;
@@ -25,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -105,17 +109,46 @@ public class ConnectionWebSocket {
 
             String[] commIds = commString.split(";");
 
-            sensorPortConfig = new SerialPortConfig(commIds[1]);
-            sensorPortConfig.setStartIndex(0);
+            // 打开伺服电机控制端口
+            try {
+                SerialPort.getCommPort(commIds[0]);
+                SerialPortConfig serialPortConfig = new SerialPortConfig(commIds[0]);
+                serialPortConfig.setStartIndex(0);
+                servoModbusUtil = new ModbusUtil(serialPortConfig);
+            } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
+                String error = "[" + commIds[0] + "] 伺服电机控制端口不存在或打开失败，错误消息：" + e.getMessage();
+                log.error(error, e);
+                SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
+            }
 
-            SerialPortConfig serialPortConfig = new SerialPortConfig(commIds[0]);
-            serialPortConfig.setStartIndex(0);
-            servoModbusUtil = new ModbusUtil(serialPortConfig);
+            // 打开动态扭矩传感器端口
+            try {
+                // 创建一个定时获取传感器数据的计划线程
+                SerialPort.getCommPort(commIds[1]);
+                sensorPortConfig = new SerialPortConfig(commIds[1]);
+                sensorPortConfig.setStartIndex(0);
+                this.modbusWorker = new ModbusWorker(sensorPortConfig);
+                this.scheduledReadSensorFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
+            } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
+                String error = "[" + commIds[1] + "] 动态扭矩传感器端口不存在或打开失败，错误消息：" + e.getMessage();
+                log.error(error, e);
+                SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
+            }
 
-            this.masterHelper = RtuMasterHelper.createMaster(commIds[2]);
+            try {
+                SerialPort.getCommPort(commIds[2]);
+                this.masterHelper = RtuMasterHelper.createMaster(commIds[2]);
+                ThreadPoolUtil.execute(() -> this.masterHelper.listen());
+            } catch ( SerialPortInvalidPortException e) {
+                String error = "[" + commIds[2] + "] 主控板端口不存在或打开失败，错误消息：" + e.getMessage();
+                log.error(error, e);
+                SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
+            }
 
-        } catch (IOException | ModbusInitException e) {
-            log.error(e.getMessage(), e);
+        } catch (IOException e) {
+            String error = "配置文件 [com-port.txt] 读取异常，错误消息：" + e.getMessage();
+            log.error(error, e);
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         }
 
     }
@@ -133,43 +166,28 @@ public class ConnectionWebSocket {
 
         log.info("[ws]创建一个连接：{}，连接总量：{}", session.getId(), onlineCount.addAndGet(1));
 
-        try {
-            // 创建一个定时获取传感器数据的计划线程
-            this.modbusWorker = new ModbusWorker(sensorPortConfig);
-            this.scheduledReadSensorFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
-
-
-            this.scheduleSendTestFuture = Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
-                try {
-                    if (!SEND_MESSAGE_QUEUE.isEmpty()) {
-                        String take = SEND_MESSAGE_QUEUE.take();
-                        session.getBasicRemote().sendText(take);
-                    }
-                } catch (IOException | InterruptedException e) {
-                    log.error(e.getMessage(), e);
+        this.scheduleSendTestFuture = ThreadPoolUtil.getScheduledExecutor().scheduleWithFixedDelay(() -> {
+            try {
+                if (!SEND_MESSAGE_QUEUE.isEmpty()) {
+                    String take = SEND_MESSAGE_QUEUE.take();
+                    session.getBasicRemote().sendText(take);
                 }
-            }, 0, 5, TimeUnit.MILLISECONDS);
+            } catch (IOException | InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        }, 0, 5, TimeUnit.MILLISECONDS);
 
-            // 定时获取伺服控制器报警记录的定时线程
-            this.scheduledReadServoFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
-                // 读取伺服报警记录
-                try {
-                    readServoValues();
-                    readServoWarns();
-                } catch (ModbusTransportException | InterruptedException e) {
-                    log.error(e.getMessage(), e);
-                }
+        // 定时获取伺服控制器报警记录的定时线程
+        this.scheduledReadServoFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(() -> {
+            // 读取伺服报警记录
+            try {
+                readServoValues();
+                readServoWarns();
+            } catch (ModbusTransportException | InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
 
-            }, 0, 1, TimeUnit.SECONDS);
-
-            ThreadPoolUtil.execute(() -> {
-                this.masterHelper.listen();
-            });
-
-
-        } catch (ModbusInitException e) {
-            log.error(e.getMessage(), e);
-        }
+        }, 0, 1, TimeUnit.SECONDS);
 
     }
 
@@ -282,7 +300,9 @@ public class ConnectionWebSocket {
         if (this.scheduledReadServoFuture != null) {
             this.scheduledReadServoFuture.cancel(false);
         }
-        this.servoModbusUtil.close();
+        if (this.servoModbusUtil != null) {
+            this.servoModbusUtil.close();
+        }
 
         if (this.scheduledReadSensorFuture != null) {
             this.scheduledReadSensorFuture.cancel(false);

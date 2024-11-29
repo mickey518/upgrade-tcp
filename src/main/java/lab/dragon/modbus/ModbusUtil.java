@@ -10,6 +10,7 @@ import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import com.serotonin.modbus4j.msg.WriteRegisterRequest;
 import com.serotonin.modbus4j.msg.WriteRegisterResponse;
 import io.netty.buffer.ByteBufUtil;
+import jssc.SerialPortException;
 import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.config.SensorProperty;
 import lab.dragon.config.SensorPropertyConfig;
@@ -29,7 +30,7 @@ public class ModbusUtil {
     private final SerialPortConfig serialPortConfig;
     private final ModbusMaster master;
 
-    public ModbusUtil(SerialPortConfig serialPortConfig) throws ModbusInitException {
+    public ModbusUtil(SerialPortConfig serialPortConfig) throws ModbusInitException, SerialPortException {
         this.serialPortConfig = serialPortConfig;
         SerialPortWrapperImpl serialPortWrapper = new SerialPortWrapperImpl(this.serialPortConfig.getCommPortId(), this.serialPortConfig.getBaudRate(), this.serialPortConfig.getDataBits(), this.serialPortConfig.getStopBits(), this.serialPortConfig.getParity());
         ModbusFactory modbusFactory = new ModbusFactory();

@@ -17,7 +17,7 @@ public class SerialPortWrapperImpl implements SerialPortWrapper {
     private final int stopBits;
     private final int parity;
 
-    public SerialPortWrapperImpl(String commPortId, int baudRate, int dataBits, int stopBits, int parity) {
+    public SerialPortWrapperImpl(String commPortId, int baudRate, int dataBits, int stopBits, int parity) throws SerialPortException {
 
         this.baudRate = baudRate;
         this.dataBits = dataBits;
@@ -36,14 +36,9 @@ public class SerialPortWrapperImpl implements SerialPortWrapper {
 
     @Override
     public void open() throws SerialPortException {
-        try {
             port.openPort();
             port.setParams(this.getBaudRate(), this.getDataBits(), this.getStopBits(), this.getParity());
             log.debug("Serial port {} opened", port.getPortName());
-        } catch (SerialPortException e) {
-            log.error("Error opening port : {} for {} ", port.getPortName(), e.getMessage());
-            throw e;
-        }
     }
 
     @Override

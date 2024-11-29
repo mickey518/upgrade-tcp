@@ -5,6 +5,7 @@ import com.serotonin.modbus4j.ModbusMaster;
 import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
+import jssc.SerialPortException;
 import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.config.SerialPortConfig;
@@ -25,7 +26,7 @@ public class ModbusWorker implements Runnable {
     private final ModbusMaster master;
     private final int slaveId;
 
-    public ModbusWorker(SerialPortConfig serialPortConfig) throws ModbusInitException {
+    public ModbusWorker(SerialPortConfig serialPortConfig) throws ModbusInitException, SerialPortException {
         this.portId = serialPortConfig.getCommPortId();
         this.slaveId = serialPortConfig.getSlaveId();
 

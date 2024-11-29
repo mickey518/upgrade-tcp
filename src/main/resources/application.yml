@@ -10,7 +10,7 @@ logging:
     file: utf-8
     console: utf-8
   level:
-    root: info
+    root: debug
     com:
       serotonin: debug
   file:
