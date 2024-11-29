@@ -4,11 +4,14 @@ import com.google.gson.JsonSyntaxException;
 import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.exception.ModbusTransportException;
 import lab.dragon.ModbusWorker;
+import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
+import lab.dragon.entity.WsConnectMessageEnum;
 import lab.dragon.modbus.ModbusUtil;
-import lab.dragon.util.DateTimeUtils;
-import lab.dragon.util.JsonUtils;
+import lab.dragon.modbus.RtuMasterHelper;
+import lab.dragon.common.util.DateTimeUtils;
+import lab.dragon.common.util.ThreadPoolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -69,6 +72,7 @@ public class ConnectionWebSocket {
     private ScheduledFuture<?> scheduleSendTestFuture;
     private SerialPortConfig sensorPortConfig;
     private ModbusWorker modbusWorker;
+    private RtuMasterHelper masterHelper;
     /**
      * 报警信息代码映射表
      */
@@ -79,13 +83,14 @@ public class ConnectionWebSocket {
      */
     @PostConstruct
     public void onComponent() {
+        log.info("websocket post construct!!!");
         if (Files.notExists(commPortConfigFile)) {
             String error = "缺少配置文件 [com-port.txt]，需要提供串口配置文件；配置文件中第一个表示伺服控制器串口，第二个表示传感器串口";
             log.error(error);
         }
         // 加载告警代码含义转换映射表
         try {
-            warnMessages = JsonUtils.loadFromFile("warn.json", Map.class);
+            warnMessages = GsonUtils.loadFromFile("warn.json", Map.class);
         } catch (IOException e) {
             String error = "缺少报警信息转换映射表 warn.json";
             log.error(error);
@@ -106,6 +111,8 @@ public class ConnectionWebSocket {
             SerialPortConfig serialPortConfig = new SerialPortConfig(commIds[0]);
             serialPortConfig.setStartIndex(0);
             servoModbusUtil = new ModbusUtil(serialPortConfig);
+
+            this.masterHelper = RtuMasterHelper.createMaster(commIds[2]);
 
         } catch (IOException | ModbusInitException e) {
             log.error(e.getMessage(), e);
@@ -155,6 +162,10 @@ public class ConnectionWebSocket {
 
             }, 0, 1, TimeUnit.SECONDS);
 
+            ThreadPoolUtil.execute(() -> {
+                this.masterHelper.listen();
+            });
+
 
         } catch (ModbusInitException e) {
             log.error(e.getMessage(), e);
@@ -172,11 +183,11 @@ public class ConnectionWebSocket {
         log.info("[ws recv] session: {}, 收到消息 =》 {}", this.session.getId(), msg);
 
         try {
-            WsConnectMessage wsConnectMessage = JsonUtils.decodeJson(msg, WsConnectMessage.class);
+            WsConnectMessage wsConnectMessage = GsonUtils.fromJson(msg, WsConnectMessage.class);
 
-            if ("write".equals(wsConnectMessage.getType())) {
+            if (WsConnectMessageEnum.write.equals(wsConnectMessage.getType())) {
                 log.info("received write command: {}", wsConnectMessage.getJson());
-                Map<String, Integer> map = JsonUtils.decodeJson(wsConnectMessage.getJson(), Map.class);
+                Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 for (Map.Entry<String, Integer> entry : map.entrySet()) {
                     int key = Integer.parseInt(entry.getKey());
                     servoModbusUtil.writeRegister(key < 1000 ? key + 10000 : key, (int) entry.getValue());
@@ -184,7 +195,12 @@ public class ConnectionWebSocket {
 
                 readServoValues();
 
-            } else if ("savelog".equals(wsConnectMessage.getType())) {
+            } else if (WsConnectMessageEnum.writeBatt.equals(wsConnectMessage.getType())) {
+                log.info("received write batt spd value: {}", wsConnectMessage.getJson());
+                Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
+                // 下发速度参数
+                this.masterHelper.writeSpd(map.get("spd"));
+            } else if (WsConnectMessageEnum.savelog.equals(wsConnectMessage.getType())) {
                 Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("操作记录-", ".txt"));
                 Files.createFile(logPath);
                 Files.write(logPath, wsConnectMessage.getJson().getBytes(StandardCharsets.UTF_8));
@@ -192,23 +208,23 @@ public class ConnectionWebSocket {
         } catch (ClassCastException e) {
             String error = "数据类型转换错误，错误消息：" + e.getMessage();
             log.error(error, e);
-            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         } catch (JsonSyntaxException e) {
             String error = "json格式错误，错误消息：" + e.getMessage();
             log.error(error, e);
-            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         } catch (ModbusTransportException e) {
             String error = "串口写入错误，错误消息：" + e.getMessage();
             log.error(error, e);
-            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         } catch (IOException e) {
             String error = "websocket发送数据错误，错误消息：" + e.getMessage();
             log.error(error, e);
-            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         } catch (InterruptedException e) {
             String error = "向发送websocket队列写入数据错误，错误消息：" + e.getMessage();
             log.error(error, e);
-            SEND_MESSAGE_QUEUE.add(JsonUtils.encodeJson(WsConnectMessage.builder().type("error").json(error).build()));
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         }
     }
 
@@ -219,7 +235,7 @@ public class ConnectionWebSocket {
      */
     private void readServoValues() throws ModbusTransportException, InterruptedException {
         Map<Integer, Object> result = servoModbusUtil.readServoValues();
-        SEND_MESSAGE_QUEUE.put(JsonUtils.encodeJson(WsConnectMessage.builder().type("result").json(JsonUtils.encodeJson(result)).build()));
+        SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.result).json(GsonUtils.toJson(result)).build()));
     }
 
     private void readServoWarns() throws ModbusTransportException, InterruptedException {
@@ -244,7 +260,7 @@ public class ConnectionWebSocket {
 
 
         if (!warnStrings.isEmpty()) {
-            SEND_MESSAGE_QUEUE.put(JsonUtils.encodeJson(WsConnectMessage.builder().type("warn").json(JsonUtils.encodeJson(warnStrings)).build()));
+            SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.warn).json(GsonUtils.toJson(warnStrings)).build()));
         }
     }
 

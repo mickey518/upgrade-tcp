@@ -1,7 +1,7 @@
 package lab.dragon.entity;
 
 public class WsConnectMessage {
-    private String type;
+    private WsConnectMessageEnum type;
 
     private String json;
 
@@ -11,11 +11,11 @@ public class WsConnectMessage {
     }
 
     public static class Builder {
-        private String type;
+        private WsConnectMessageEnum type;
 
         private String json;
 
-        public Builder type(String type) {
+        public Builder type(WsConnectMessageEnum type) {
             this.type = type;
             return this;
         }
@@ -34,19 +34,12 @@ public class WsConnectMessage {
         return new WsConnectMessage.Builder();
     }
 
-    public String getType() {
+    public WsConnectMessageEnum getType() {
         return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
     }
 
     public String getJson() {
         return json;
     }
 
-    public void setJson(String json) {
-        this.json = json;
-    }
 }

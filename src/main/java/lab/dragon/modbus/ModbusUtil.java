@@ -14,7 +14,7 @@ import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.config.SensorProperty;
 import lab.dragon.config.SensorPropertyConfig;
 import lab.dragon.config.SerialPortConfig;
-import lab.dragon.util.ByteUtils;
+import lab.dragon.common.util.ByteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

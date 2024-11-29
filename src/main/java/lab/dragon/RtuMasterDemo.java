@@ -6,7 +6,6 @@ import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import com.serotonin.modbus4j.msg.WriteRegisterRequest;
 import com.serotonin.modbus4j.msg.WriteRegisterResponse;
-//import gnu.io.SerialPort;
 import jssc.SerialPort;
 import lab.dragon.modbus.SerialPortWrapperImpl;
 

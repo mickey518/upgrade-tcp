@@ -6,11 +6,12 @@ import com.serotonin.modbus4j.exception.ModbusInitException;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import lab.dragon.api.ConnectionWebSocket;
+import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
+import lab.dragon.entity.WsConnectMessageEnum;
 import lab.dragon.modbus.SerialPortWrapperImpl;
-import lab.dragon.util.ByteUtils;
-import lab.dragon.util.JsonUtils;
+import lab.dragon.common.util.ByteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,8 +66,8 @@ public class ModbusWorker implements Runnable {
                     result.put(6, anInt6);
                 }
 
-                log.info("传感器数据：{}", JsonUtils.encodeJson(result));
-                ConnectionWebSocket.SEND_MESSAGE_QUEUE.put(JsonUtils.encodeJson(WsConnectMessage.builder().type("result-sensor").json(JsonUtils.encodeJson(result)).build()));
+                log.info("传感器数据：{}", GsonUtils.toJson(result));
+                ConnectionWebSocket.SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.resultSensor).json(GsonUtils.toJson(result)).build()));
             }
 
         } catch (Exception e) {
