@@ -1,1 +1,1 @@
-COM3;COM3;cu.usbserial-024ANM3J
+COM4;COM3;COM7

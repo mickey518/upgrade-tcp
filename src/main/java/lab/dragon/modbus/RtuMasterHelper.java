@@ -110,7 +110,7 @@ public class RtuMasterHelper {
 
                 }
                 //  todo 这里是测试数据，是要删除掉的额
-                Thread.sleep(100);
+                Thread.sleep(500);
             } catch (Exception e) {
                 log.error("[主控板] 读取数据错误，错误消息： {}", e.getMessage(), e);
                 break;
