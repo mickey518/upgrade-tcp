@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -116,7 +117,7 @@ public class ConnectionWebSocket {
 
     private void writeParameter(Object obj) {
         try {
-            GsonUtils.writeToFile(obj, "parameter.json");
+            GsonUtils.writeToFile(obj, "parameter.json", StandardOpenOption.CREATE_NEW);
         } catch (IOException e) {
             log.error("保存参数失败， e: {}", e.getMessage(), e);
         }

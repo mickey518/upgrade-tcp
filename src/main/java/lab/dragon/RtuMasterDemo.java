@@ -17,13 +17,15 @@ public class RtuMasterDemo {
     public static void main(String[] args) throws Exception{
 //        createRtuMaster();
 
-        long summed = ByteUtils.sum(new byte[]{(byte) 0xAA, (byte) 0x13, (byte) 0x09, (byte) 0x00,
+        byte[] bytes = {(byte) 0xAA, (byte) 0x13, (byte) 0x00, (byte) 0x00,
                 (byte) 0x00, (byte) 0x00, (byte) 0xE8, (byte) 0x03,
-                (byte) 0xE8, (byte) 0x08, (byte) 0x16, (byte) 0x16,
-                (byte) 0x16, (byte) 0x16, (byte) 0x16, (byte) 0x16,
-                (byte) 0x16, (byte) 0x16, (byte) 0x55
-        });
-        System.out.println("sum: " + summed + "; 0xFF is: " + String.format("%02X", (byte)(0xFF & summed)));
+                (byte) 0xE8, (byte) 0x03, (byte) 0x16, (byte) 0x16,
+                (byte) 0xDC, (byte) 0x00, (byte) 0x50, (byte) 0x08,
+                (byte) 0x16, (byte) 0x22, (byte) 0x55
+        };
+        long summed = ByteUtils.sum(bytes);
+        bytes[2] = (byte)(0xFF & summed);
+        System.out.println("sum: " + summed + "; 0xFF is: " + String.format("%02X", (byte)(0xFF & summed)) + "; bytes: " + ByteUtils.hexString(bytes));
     }
 
     private static void createRtuMaster() throws Exception{
