@@ -6,6 +6,10 @@ import com.google.gson.annotations.SerializedName;
  * @author mickey.wang
  */
 public enum WsConnectMessageEnum {
+    @SerializedName("read-arameter")
+    readParameter,
+    @SerializedName("write-arameter")
+    writeParameter,
     @SerializedName("write")
     write,
     @SerializedName("write-batt")

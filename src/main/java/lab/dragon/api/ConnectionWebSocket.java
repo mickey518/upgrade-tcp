@@ -28,10 +28,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -101,6 +100,28 @@ public class ConnectionWebSocket {
         }
     }
 
+    private Map readParameter() {
+        Map map;
+        try {
+             map = GsonUtils.loadFromFile("parameter.json", Map.class);
+        } catch (IOException e) {
+            map = new HashMap();
+        }
+        if (!map.containsKey("spd-gain")) {
+            map.put("spd-gain", 1.0081f);
+        }
+        SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.readParameter).json(GsonUtils.toJson(map)).build()));
+        return map;
+    }
+
+    private void writeParameter(Object obj) {
+        try {
+            GsonUtils.writeToFile(obj, "parameter.json");
+        } catch (IOException e) {
+            log.error("保存参数失败， e: {}", e.getMessage(), e);
+        }
+    }
+
     private void loadModbusConfig() {
         try {
             byte[] bytes = Files.readAllBytes(commPortConfigFile);
@@ -161,6 +182,8 @@ public class ConnectionWebSocket {
     @OnOpen
     public void onOpen(Session session) {
         this.session = session;
+
+        readParameter();
 
         loadModbusConfig();
 
@@ -226,6 +249,8 @@ public class ConnectionWebSocket {
                 Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("操作记录-", ".txt"));
                 Files.createFile(logPath);
                 Files.write(logPath, wsConnectMessage.getJson().getBytes(StandardCharsets.UTF_8));
+            } else if (WsConnectMessageEnum.writeParameter.equals(wsConnectMessage.getType())) {
+                writeParameter(GsonUtils.fromJson(wsConnectMessage.getJson()));
             }
         } catch (ClassCastException e) {
             String error = "数据类型转换错误，错误消息：" + e.getMessage();
