@@ -25,7 +25,9 @@ import java.util.Map;
 public class RtuMasterHelper {
     private static final Logger log = LoggerFactory.getLogger(RtuMasterHelper.class);
     private final SerialPort serialPort;
-    private byte[] idTemp = new byte[2];
+    private final byte[] idTemp = new byte[2];
+
+    private WriteSpdThread writeSpdThread = null;
 
     private RtuMasterHelper(String port) {
         SerialPortConfig serialPortConfig = new SerialPortConfig(port);
@@ -91,7 +93,6 @@ public class RtuMasterHelper {
                     Thread.sleep(50);
                     continue;
                 }
-                log.info("bytes read: {}", bytesRead);
                 // 串口有接收到数据
                 buffer = new byte[bytesRead];
                 System.arraycopy(bytes, 0, buffer, 0, bytesRead);
@@ -132,61 +133,66 @@ public class RtuMasterHelper {
         }
 
         int index = 0;
-        // 帧头 0xAA
+        // 帧头 0 0xAA
         byte head = buffer[index];
         index++;
-        // 长度
+        // 长度 1
         byte length = buffer[index];
         index++;
-        // 校验和
+        // 校验和 2
         byte sum = buffer[index];
         index++;
-        // 错误
+        // 错误 3
         byte error = buffer[index];
         index++;
+        // 4
         idTemp[0] = buffer[index];
         index++;
+        // 5
         idTemp[1] = buffer[index];
         index++;
+        // 6
         byte bmsError1 = buffer[index];
         index++;
+        // 7
         byte bmsError2 = buffer[index];
         index++;
-        // bms电流低位
+        // 8 bms电流低位
         byte currentIOLow = buffer[index];
         index++;
-        // bms电流高位
+        // 9 bms电流高位
         byte currentIOHigh = buffer[index];
         index++;
-        // 霍尔速度低位
+        // 10 霍尔速度低位
         byte hallSpdLow = buffer[index];
         index++;
-        // 霍尔速度高位
+        // 11 霍尔速度高位
         byte hallSpdHigh = buffer[index];
         index++;
-        // 驱动温度
+        // 12 驱动温度
         byte drvTemp = buffer[index];
         index++;
-        // 电机温度
+        // 13 电机温度
         byte motTemp = buffer[index];
         index++;
-        // 电池电压低位
+        // 14 电池电压低位
         byte battVoltageLow = buffer[index];
         index++;
-        // 电池电压高位
+        // 15 电池电压高位
         byte battVoltageHigh = buffer[index];
         index++;
-        // 电池容量
+        // 16 电池容量
         byte battVolumn = buffer[index];
         index++;
-
-        // 电池温度1
+        // 17
+        index++;
+        // 18 电池温度1
         byte battTemp1 = buffer[index];
         index++;
-        // 电池温度2
+        // 19 电池温度2
         byte battTemp2 = buffer[index];
         index++;
-        // 帧尾
+        // 20 帧尾
         byte feater = buffer[index];
         index++;
 
@@ -218,28 +224,15 @@ public class RtuMasterHelper {
         result.put("battTemp2", battTemp2);
 
         ConnectionWebSocket.SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.resultBatt).json(GsonUtils.toJson(result)).build()));
+
+        if (writeSpdThread == null) {
+            writeSpdThread = new WriteSpdThread(this, idTemp);
+            writeSpdThread.start();
+        }
     }
 
     public void writeSpd(Integer spd) throws IOException {
-        /*
-        0     1     2     3    4        5       6          7         8            9       10
-        帧头  长度  检验和 模式  id低位    id高位  速度低位    速度高位    母线电压低位  母线电压高位  帧尾
-         */
-        byte[] bytes = new byte[11];
-
-        bytes[0] = (byte) 0xAA;
-        bytes[bytes.length - 1] = (byte) 0x55;
-        bytes[1] = (byte) bytes.length;
-        bytes[2] = 0;
-        bytes[3] = 0;
-        bytes[4] = idTemp[0];
-        bytes[5] = idTemp[1];
-        byte[] bytesLittleEndian = ByteUtils.short2BytesLittleEndian(spd.shortValue());
-        System.arraycopy(bytesLittleEndian, 0, bytes, 6, 2);
-        bytes[8] = 0;
-        bytes[9] = 0;
-
-        writeCommand(bytes);
+        writeSpdThread.spd.set(spd);
     }
 
     /**
@@ -263,7 +256,7 @@ public class RtuMasterHelper {
         writeCommand(bytes);
     }
 
-    private void writeCommand(byte[] bytes) throws IOException {
+    public void writeCommand(byte[] bytes) throws IOException {
         bytes[2] = (byte) ((byte) 0xFF & ByteUtils.sum(bytes));
 
         log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.hexString(bytes));

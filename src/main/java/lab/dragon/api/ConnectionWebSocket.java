@@ -8,13 +8,13 @@ import com.serotonin.modbus4j.exception.ModbusTransportException;
 import jssc.SerialPortException;
 import lab.dragon.ModbusWorker;
 import lab.dragon.common.gson.GsonUtils;
+import lab.dragon.common.util.DateTimeUtils;
+import lab.dragon.common.util.ThreadPoolUtil;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
 import lab.dragon.entity.WsConnectMessageEnum;
 import lab.dragon.modbus.ModbusUtil;
 import lab.dragon.modbus.RtuMasterHelper;
-import lab.dragon.common.util.DateTimeUtils;
-import lab.dragon.common.util.ThreadPoolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,16 +42,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Component
 @ServerEndpoint("/ws")
 public class ConnectionWebSocket {
-    private final Logger log = LoggerFactory.getLogger(ConnectionWebSocket.class);
-
     /**
      * websocket发送数据队列
      */
     public static final LinkedBlockingQueue<String> SEND_MESSAGE_QUEUE = new LinkedBlockingQueue<>();
-
     public static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-
     private static final AtomicInteger onlineCount = new AtomicInteger(0);
+    private final Logger log = LoggerFactory.getLogger(ConnectionWebSocket.class);
     /**
      * 串口配置文件，多个端口之间用分号进行分割
      */
@@ -60,6 +57,10 @@ public class ConnectionWebSocket {
      * 当前websocket的session标识
      */
     private Session session;
+    /**
+     * 串口列表
+     */
+    private static final String[] commIds = new String[3];
 
     /**
      * 伺服控制modbus模块
@@ -92,6 +93,27 @@ public class ConnectionWebSocket {
             String error = "缺少配置文件 [com-port.txt]，需要提供串口配置文件；配置文件中第一个表示伺服控制器串口，第二个表示传感器串口";
             log.error(error);
         }
+        // 读取串口配置文件
+        try {
+            byte[] bytes = Files.readAllBytes(commPortConfigFile);
+            if (bytes.length == 0) {
+                log.error("串口配置文件 [com-port.txt] 为空，使用默认配置");
+                commIds[0] = "COM4";
+                commIds[1] = "COM3";
+                commIds[2] = "COM7";
+            } else {
+                log.info("读取串口配置文件");
+                String commString = new String(bytes);
+                String[] split = commString.split(";");
+                commIds[0] = split[0];
+                commIds[1] = split[1];
+                commIds[2] = split[2];
+            }
+        } catch (IOException e) {
+            String error = "串口配置文件 [com-port.txt] 无法打开";
+            log.error(error);
+        }
+
         // 加载告警代码含义转换映射表
         try {
             warnMessages = GsonUtils.loadFromFile("warn.json", Map.class);
@@ -101,10 +123,15 @@ public class ConnectionWebSocket {
         }
     }
 
+    /**
+     * 读取系统参数文件
+     *
+     * @return 系统参数文件映射map
+     */
     private Map readParameter() {
         Map map;
         try {
-             map = GsonUtils.loadFromFile("parameter.json", Map.class);
+            map = GsonUtils.loadFromFile("parameter.json", Map.class);
         } catch (IOException e) {
             map = new HashMap();
         }
@@ -115,6 +142,11 @@ public class ConnectionWebSocket {
         return map;
     }
 
+    /**
+     * 保存系统参数
+     *
+     * @param obj
+     */
     private void writeParameter(Object obj) {
         try {
             GsonUtils.writeToFile(obj, "parameter.json", StandardOpenOption.CREATE_NEW);
@@ -124,51 +156,38 @@ public class ConnectionWebSocket {
     }
 
     private void loadModbusConfig() {
+        // 打开伺服电机控制端口
         try {
-            byte[] bytes = Files.readAllBytes(commPortConfigFile);
+            SerialPort.getCommPort(commIds[0]);
+            SerialPortConfig serialPortConfig = new SerialPortConfig(commIds[0]);
+            serialPortConfig.setStartIndex(0);
+            servoModbusUtil = new ModbusUtil(serialPortConfig);
+        } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
+            String error = "[" + commIds[0] + "] 伺服电机控制端口不存在或打开失败，错误消息：" + e.getMessage();
+            log.error(error, e);
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
+        }
 
-            String commString = new String(bytes);
+        // 打开动态扭矩传感器端口
+        try {
+            // 创建一个定时获取传感器数据的计划线程
+            SerialPort.getCommPort(commIds[1]);
+            sensorPortConfig = new SerialPortConfig(commIds[1]);
+            sensorPortConfig.setStartIndex(0);
+            this.modbusWorker = new ModbusWorker(sensorPortConfig);
+            this.scheduledReadSensorFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
+        } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
+            String error = "[" + commIds[1] + "] 动态扭矩传感器端口不存在或打开失败，错误消息：" + e.getMessage();
+            log.error(error, e);
+            SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
+        }
 
-            String[] commIds = commString.split(";");
-
-            // 打开伺服电机控制端口
-            try {
-                SerialPort.getCommPort(commIds[0]);
-                SerialPortConfig serialPortConfig = new SerialPortConfig(commIds[0]);
-                serialPortConfig.setStartIndex(0);
-                servoModbusUtil = new ModbusUtil(serialPortConfig);
-            } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
-                String error = "[" + commIds[0] + "] 伺服电机控制端口不存在或打开失败，错误消息：" + e.getMessage();
-                log.error(error, e);
-                SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
-            }
-
-            // 打开动态扭矩传感器端口
-            try {
-                // 创建一个定时获取传感器数据的计划线程
-                SerialPort.getCommPort(commIds[1]);
-                sensorPortConfig = new SerialPortConfig(commIds[1]);
-                sensorPortConfig.setStartIndex(0);
-                this.modbusWorker = new ModbusWorker(sensorPortConfig);
-                this.scheduledReadSensorFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
-            } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
-                String error = "[" + commIds[1] + "] 动态扭矩传感器端口不存在或打开失败，错误消息：" + e.getMessage();
-                log.error(error, e);
-                SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
-            }
-
-            try {
-                SerialPort.getCommPort(commIds[2]);
-                this.masterHelper = RtuMasterHelper.createMaster(commIds[2]);
-                ThreadPoolUtil.execute(() -> this.masterHelper.listen());
-            } catch ( SerialPortInvalidPortException e) {
-                String error = "[" + commIds[2] + "] 主控板端口不存在或打开失败，错误消息：" + e.getMessage();
-                log.error(error, e);
-                SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
-            }
-
-        } catch (IOException e) {
-            String error = "配置文件 [com-port.txt] 读取异常，错误消息：" + e.getMessage();
+        try {
+            SerialPort.getCommPort(commIds[2]);
+            this.masterHelper = RtuMasterHelper.createMaster(commIds[2]);
+            ThreadPoolUtil.execute(() -> this.masterHelper.listen());
+        } catch (SerialPortInvalidPortException e) {
+            String error = "[" + commIds[2] + "] 主控板端口不存在或打开失败，错误消息：" + e.getMessage();
             log.error(error, e);
             SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         }
@@ -242,7 +261,7 @@ public class ConnectionWebSocket {
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
                 this.masterHelper.writeSpd(map.get("spd"));
-            }  else if (WsConnectMessageEnum.writeMode.equals(wsConnectMessage.getType())) {
+            } else if (WsConnectMessageEnum.writeMode.equals(wsConnectMessage.getType())) {
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
                 this.masterHelper.writeMode(map.get("mode"));
@@ -319,7 +338,7 @@ public class ConnectionWebSocket {
      */
     @OnError
     public void onError(Throwable throwable) throws IOException {
-        log.error(throwable.getMessage(), throwable);
+        log.error("websocket捕捉到异常，导致websocket关闭。异常信息：{}", throwable.getMessage(), throwable);
         this.session.close();
     }
 

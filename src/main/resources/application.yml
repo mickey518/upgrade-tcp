@@ -12,7 +12,7 @@ logging:
   level:
     root: info
     com:
-      serotonin: debug
+      serotonin: info
   file:
     name: logs/${spring.application.name}.log
   pattern:

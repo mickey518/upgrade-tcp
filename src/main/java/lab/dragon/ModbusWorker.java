@@ -49,7 +49,6 @@ public class ModbusWorker implements Runnable {
 
             if (response.isException()) {
                 log.error("[modbus][{}]读取保持寄存器错误，错误信息是: {}", this.portId, response.getExceptionMessage());
-//                throw new RuntimeException(response.getExceptionMessage());
             } else {
                 byte[] responseData = response.getData();
                 byte[] bytes = new byte[4];
@@ -72,7 +71,12 @@ public class ModbusWorker implements Runnable {
             }
 
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("modbus worker connected : {} , 异常消息: {}", this.master.isConnected(), e.getMessage(), e);
+            try {
+                this.master.init();
+            } catch (ModbusInitException ex) {
+                log.error("重连失败!!!");
+            }
         }
     }
 
