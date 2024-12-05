@@ -10,6 +10,7 @@ import lab.dragon.ModbusWorker;
 import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.common.util.DateTimeUtils;
 import lab.dragon.common.util.ThreadPoolUtil;
+import lab.dragon.config.ConstantConfiguration;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
 import lab.dragon.entity.WsConnectMessageEnum;
@@ -49,19 +50,11 @@ public class ConnectionWebSocket {
     public static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private static final AtomicInteger onlineCount = new AtomicInteger(0);
     private final Logger log = LoggerFactory.getLogger(ConnectionWebSocket.class);
-    /**
-     * 串口配置文件，多个端口之间用分号进行分割
-     */
-    private final Path commPortConfigFile = Paths.get("com-port.txt");
+
     /**
      * 当前websocket的session标识
      */
     private Session session;
-    /**
-     * 串口列表
-     */
-    private static final String[] commIds = new String[3];
-
     /**
      * 伺服控制modbus模块
      */
@@ -89,30 +82,6 @@ public class ConnectionWebSocket {
     @PostConstruct
     public void onComponent() {
         log.info("websocket post construct!!!");
-        if (Files.notExists(commPortConfigFile)) {
-            String error = "缺少配置文件 [com-port.txt]，需要提供串口配置文件；配置文件中第一个表示伺服控制器串口，第二个表示传感器串口";
-            log.error(error);
-        }
-        // 读取串口配置文件
-        try {
-            byte[] bytes = Files.readAllBytes(commPortConfigFile);
-            if (bytes.length == 0) {
-                log.error("串口配置文件 [com-port.txt] 为空，使用默认配置");
-                commIds[0] = "COM4";
-                commIds[1] = "COM3";
-                commIds[2] = "COM7";
-            } else {
-                log.info("读取串口配置文件");
-                String commString = new String(bytes);
-                String[] split = commString.split(";");
-                commIds[0] = split[0];
-                commIds[1] = split[1];
-                commIds[2] = split[2];
-            }
-        } catch (IOException e) {
-            String error = "串口配置文件 [com-port.txt] 无法打开";
-            log.error(error);
-        }
 
         // 加载告警代码含义转换映射表
         try {
@@ -157,37 +126,40 @@ public class ConnectionWebSocket {
 
     private void loadModbusConfig() {
         // 打开伺服电机控制端口
+        String commId = ConstantConfiguration.commIds[0];
         try {
-            SerialPort.getCommPort(commIds[0]);
-            SerialPortConfig serialPortConfig = new SerialPortConfig(commIds[0]);
+            SerialPort.getCommPort(commId);
+            SerialPortConfig serialPortConfig = new SerialPortConfig(commId);
             serialPortConfig.setStartIndex(0);
             servoModbusUtil = new ModbusUtil(serialPortConfig);
         } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
-            String error = "[" + commIds[0] + "] 伺服电机控制端口不存在或打开失败，错误消息：" + e.getMessage();
+            String error = "[" + commId + "] 伺服电机控制端口不存在或打开失败，错误消息：" + e.getMessage();
             log.error(error, e);
             SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         }
 
         // 打开动态扭矩传感器端口
+        commId = ConstantConfiguration.commIds[1];
         try {
             // 创建一个定时获取传感器数据的计划线程
-            SerialPort.getCommPort(commIds[1]);
-            sensorPortConfig = new SerialPortConfig(commIds[1]);
+            SerialPort.getCommPort(commId);
+            sensorPortConfig = new SerialPortConfig(commId);
             sensorPortConfig.setStartIndex(0);
             this.modbusWorker = new ModbusWorker(sensorPortConfig);
             this.scheduledReadSensorFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
         } catch (ModbusInitException | SerialPortException | SerialPortInvalidPortException e) {
-            String error = "[" + commIds[1] + "] 动态扭矩传感器端口不存在或打开失败，错误消息：" + e.getMessage();
+            String error = "[" + commId + "] 动态扭矩传感器端口不存在或打开失败，错误消息：" + e.getMessage();
             log.error(error, e);
             SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         }
 
+        commId = ConstantConfiguration.commIds[2];
         try {
-            SerialPort.getCommPort(commIds[2]);
-            this.masterHelper = RtuMasterHelper.createMaster(commIds[2]);
+            SerialPort.getCommPort(commId);
+            this.masterHelper = RtuMasterHelper.createMaster(commId);
             ThreadPoolUtil.execute(() -> this.masterHelper.listen());
         } catch (SerialPortInvalidPortException e) {
-            String error = "[" + commIds[2] + "] 主控板端口不存在或打开失败，错误消息：" + e.getMessage();
+            String error = "[" + commId + "] 主控板端口不存在或打开失败，错误消息：" + e.getMessage();
             log.error(error, e);
             SEND_MESSAGE_QUEUE.add(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.error).json(error).build()));
         }

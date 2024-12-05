@@ -27,5 +27,7 @@ public enum WsConnectMessageEnum {
     @SerializedName("warn")
     warn,
     @SerializedName("error")
-    error;
+    error,
+    @SerializedName("upgrade")
+    upgrade
 }
