@@ -123,7 +123,6 @@ public class RtuMasterHelper {
             log.error("校验和错误，跳过");
             return;
         }
-
     }
 
     private void decodeMsgAA(byte[] buffer) {
@@ -271,5 +270,12 @@ public class RtuMasterHelper {
         bytes[2] = 0;
         long summed = ByteUtils.sum(bytes);
         return buffer[2] == (byte) ((byte) 0xFF & summed);
+    }
+
+    /**
+     * 线程关闭释放流程
+     */
+    public void close() {
+        this.writeSpdThread = null;
     }
 }

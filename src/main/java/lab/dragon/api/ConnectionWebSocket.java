@@ -363,6 +363,9 @@ public class ConnectionWebSocket {
         if (this.scheduleSendTestFuture != null) {
             this.scheduleSendTestFuture.cancel(false);
         }
+        if (this.masterHelper != null) {
+            this.masterHelper.close();
+        }
 
         log.info("[ws]断开连接：{}，连接总量：{}", this.session.getId(), onlineCount.addAndGet(-1));
         try {
