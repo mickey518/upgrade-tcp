@@ -2,6 +2,10 @@ version: '@project.version@'
 spring:
   application:
     name: a-721
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 server:
   # 程序API接口启动端口号
   port: 4000

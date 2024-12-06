@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -26,6 +27,7 @@ public class RtuMasterHelper {
     private static final Logger log = LoggerFactory.getLogger(RtuMasterHelper.class);
     private final SerialPort serialPort;
     private final byte[] idTemp = new byte[2];
+    public final AtomicBoolean isContinued = new AtomicBoolean(false);
 
     private WriteSpdThread writeSpdThread = null;
 
@@ -121,7 +123,23 @@ public class RtuMasterHelper {
     private void decodeMsgA5(byte[] buffer) {
         if (!checkSum(buffer)) {
             log.error("校验和错误，跳过");
+            isContinued.set(false);
             return;
+        }
+        /*
+        帧头  0  ｜长度 1  ｜校验和 2｜返回码3｜帧尾 4
+        --------------------------------------------------------------
+        0xA5    ｜0x05   ｜0x00   ｜0x00   ｜0x5A   ｜
+         */
+        byte code = buffer[3];
+        if (code == 0) {
+            isContinued.set(true);
+        } else if (code == 1) {
+            isContinued.set(false);
+            log.error("CRC错误");
+        } else if (code == 2) {
+            isContinued.set(false);
+            log.error("长度错误");
         }
     }
 
