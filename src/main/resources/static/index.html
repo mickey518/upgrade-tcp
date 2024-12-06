@@ -1,264 +1,506 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>主控板-高级管理</title>
-    <style>
-              /* 页面样式 */
-              body {
-                  font-family: Arial, sans-serif;
-                  background-color: #f4f7f6;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  min-height: 100vh;
-                  margin: 0;
-              }
 
-              h1 {
-                  color: #333;
-                  text-align: center;
-              }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>主控板-高级管理</title>
+  <style>
+    /* 页面样式 */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      /* 深色背景 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 95vh;
+      margin: 0;
+      color: #e0e0e0;
+      /* 浅色文字 */
+    }
 
-              /* 外部容器 */
-              .container {
-                  min-width: 800px;
-                  max-width: 1080px;
-                  width: 100%;
-                  padding: 20px;
-                  background-color: #fff;
-                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                  border-radius: 10px;
-                  text-align: center;
-              }
-              /* Flexbox 布局：将按钮和输入框放在一行 */
-              .file-upload-container {
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-              }
+    h1 {
+      color: #e0e0e0;
+      text-align: center;
+    }
 
-              /* 输入框样式 */
-              input[type="text"] {
-                  width: 90%;
-                  height: 40px;
-                  padding: 1% 1% 1% 1%;
-                  margin: 10px 5px 10px 0;
-                  font-size: 16px;
-                  border-radius: 5px;
-                  border: 1px solid #ccc;
-                  outline: none;
-                  background-color: #f9f9f9;
-                  color: #333;
-                  transition: all 0.3s ease;
-              }
+    /* 外部容器 */
+    .container {
+      min-width: 800px;
+      max-width: 1080px;
+      width: 100%;
+      padding: 20px;
+      background-color: #1e1e1e;
+      /* 深色背景 */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      text-align: center;
+    }
 
-              input[type="text"]:focus {
-                  border-color: #66afe9;
-                  box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
-              }
+    /* Flexbox 布局：将按钮和输入框放在一行 */
+    .file-upload-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-              /* 按钮样式 */
-              button {
-                  width: 40%;
-                  height: 40px;
-                  background-color: #4CAF50;
-                  color: white;
-                  border: none;
-                  border-radius: 5px;
-                  font-size: 16px;
-                  cursor: pointer;
-                  transition: background-color 0.3s ease;
-                  margin: 20px 0px;
-              }
+    /* 输入框样式 */
+    input[type="text"] {
+      width: 90%;
+      height: 40px;
+      padding: 1% 1% 1% 1%;
+      margin: 10px 5px 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #555;
+      /* 深色边框 */
+      outline: none;
+      background-color: #333;
+      /* 深色背景 */
+      color: #e0e0e0;
+      /* 浅色文字 */
+      transition: all 0.3s ease;
+    }
 
-              #disconnectButton {
-                  background-color: #db3615;
-              }
+    input[type="text"]:focus {
+      border-color: #66afe9;
+      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+    }
 
-              button:hover {
-                  background-color: #45a049;
-              }
+    /* 文件上传输入框样式 */
+    input[type="file"] {
+      width: 58%;
+      padding: 10px;
+      margin: 10px 5px 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #555;
+      /* 深色边框 */
+      background-color: #333;
+      /* 深色背景 */
+      cursor: pointer;
+      color: #e0e0e0;
+      /* 浅色文字 */
+      transition: all 0.3s ease;
+    }
 
-              /* 日志区域样式 */
-              #log {
-                  margin-top: 20px;
-                  border: 1px solid #ccc;
-                  height: 400px;
-                  overflow-y: auto;
-                  padding: 10px;
-                  background-color: #f8f8f8;
-                  border-radius: 5px;
-                  text-align: left;
-                  font-size: 14px;
-                  color: #555;
-              }
-              /* 文件上传输入框样式 */
-              input[type="file"] {
-                  width: 90%;
-                  padding: 10px;
-                  margin: 10px 5px 10px 0;
-                  font-size: 16px;
-                  border-radius: 5px;
-                  border: 1px solid #ccc;
-                  background-color: #f9f9f9;
-                  cursor: pointer;
-                  transition: all 0.3s ease;
-              }
+    input[type="file"]:focus {
+      border-color: #66afe9;
+      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+    }
 
-              input[type="file"]:focus {
-                  border-color: #66afe9;
-                  box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
-              }
+    /* 自定义上传按钮 */
+    input[type="file"]::-webkit-file-upload-button {
+      background-color: #444;
+      /* 深色按钮背景 */
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
 
-              /* 自定义上传按钮 */
-              input[type="file"]::-webkit-file-upload-button {
-                  background-color: #4CAF50;
-                  color: white;
-                  border: none;
-                  padding: 10px 20px;
-                  border-radius: 5px;
-                  font-size: 16px;
-                  cursor: pointer;
-                  transition: background-color 0.3s ease;
-              }
+    input[type="file"]::-webkit-file-upload-button:hover {
+      background-color: #666;
+      /* 按钮悬停效果 */
+    }
 
-              input[type="file"]::-webkit-file-upload-button:hover {
-                  background-color: #45a049;
-              }
-              #uploadButton {
-      <!--            height: 64.5px;-->
-                  padding: 10px;
-              }
-    </style>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const fileInput = document.getElementById('upgrade');
-        const uploadButton = document.getElementById('uploadButton');
-        var ws;
+    /* 按钮样式 */
+    button {
+      width: 20%;
+      height: 40px;
+      background-color: #444;
+      /* 深色按钮背景 */
+      color: white;
+      border: 1px solid #66afe9;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin: 10px 5px 10px 0;
+    }
 
-        // 点击“连接”按钮后创建 WebSocket 连接
-        document
-          .getElementById("connectButton")
-          .addEventListener("click", function () {
-            var wsUrl = "ws://127.0.0.1:4000/advanced-ws";
+    #disconnectButton {
+      background-color: #db3615;
+      /* 红色背景 */
+    }
 
-            ws = new WebSocket(wsUrl);
+    button:hover {
+      background-color: #666;
+      /* 按钮悬停效果 */
+    }
 
-            ws.onopen = function () {
-              logMessage("连接已打开");
-            };
+    /* 日志区域样式 */
+    #log {
+      margin-top: 20px;
+      border: 1px solid #444;
+      /* 深色边框 */
+      height: 410px;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #222;
+      /* 深色背景 */
+      border-radius: 5px;
+      text-align: left;
+      font-size: 14px;
+      color: #e0e0e0;
+      /* 浅色文字 */
+    }
+  </style>
 
-            ws.onerror = function (error) {
-              logMessage("发生错误: " + error);
-            };
+  <!-- <style>
+    /* 页面样式 */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #b2d4c9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 95vh;
+      margin: 0;
+    }
 
-            ws.onmessage = function (event) {
-              logMessage("收到消息: " + event.data);
-            };
+    h1 {
+      color: #333;
+      text-align: center;
+    }
 
-            ws.onclose = function () {
-              logMessage("连接已关闭");
-            };
-          });
+    /* 外部容器 */
+    .container {
+      min-width: 800px;
+      max-width: 1080px;
+      width: 100%;
+      padding: 20px;
+      background-color: #656363;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      text-align: center;
+    }
 
-        // 断开
-        document
-          .getElementById("disconnectButton")
-          .addEventListener("click", function () {
-            logMessage("disconnectButton clicked.");
-            ws.close();
-          });
+    /* Flexbox 布局：将按钮和输入框放在一行 */
+    .file-upload-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        // 发送消息
-        document
-          .getElementById("sendButton")
-          .addEventListener("click", function () {
-            var message = document.getElementById("messageInput").value;
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(message);
-              logMessage("发送消息: " + message);
-            } else {
-              logMessage("连接未打开");
-            }
-          });
+    /* 输入框样式 */
+    input[type="text"] {
+      width: 90%;
+      height: 40px;
+      padding: 1% 1% 1% 1%;
+      margin: 10px 5px 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      outline: none;
+      background-color: #f9f9f9;
+      color: #333;
+      transition: all 0.3s ease;
+    }
 
-        // 显示日志信息
-        function logMessage(message) {
-          var log = document.getElementById("log");
-          log.innerHTML += message + "<br>";
-          log.scrollTop = log.scrollHeight; // 滚动到最新消息
-        }
+    input[type="text"]:focus {
+      border-color: #66afe9;
+      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+    }
 
-        var file;
-      // 上传远程升级文件
+    /* 文件上传输入框样式 */
+    input[type="file"] {
+      width: 58%;
+      padding: 10px;
+      margin: 10px 5px 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background-color: #f9f9f9;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    input[type="file"]:focus {
+      border-color: #66afe9;
+      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+    }
+
+    /* 自定义上传按钮 */
+    input[type="file"]::-webkit-file-upload-button {
+      background-color: #375038;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    input[type="file"]::-webkit-file-upload-button:hover {
+      background-color: #375038;
+    }
+
+    /* 按钮样式 */
+    button {
+      width: 20%;
+      height: 40px;
+      background-color: #375038;
+      color: white;
+      border: 1px solid #66afe9;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin: 10px 5px 10px 0;
+    }
+
+    #disconnectButton {
+      background-color: #db3615;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    /* 日志区域样式 */
+    #log {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      height: 410px;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #f8f8f8;
+      border-radius: 5px;
+      text-align: left;
+      font-size: 14px;
+      color: #555;
+    }
+  </style> -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var ws;
+      var fileChunks = [];
+      var file;
+
+      // 点击“连接”按钮后创建 WebSocket 连接
       document
-        .getElementById("upgrade")
-        .addEventListener("change", function (event) {
-         file = event.target.files[0];
+        .getElementById("connectButton")
+        .addEventListener("click", function () {
+          var wsUrl = "ws://127.0.0.1:4000/advanced-ws";
+
+          ws = new WebSocket(wsUrl);
+
+          ws.onopen = function () {
+            logMessage("连接已打开");
+          };
+
+          ws.onerror = function (error) {
+            logMessage("发生错误: " + error);
+          };
+
+          ws.onmessage = function (event) {
+            logMessage("收到消息<<<: " + event.data);
+          };
+
+          ws.onclose = function () {
+            logMessage("连接已关闭");
+          };
         });
 
-      // 上传文件
+      // 断开
+      document
+        .getElementById("disconnectButton")
+        .addEventListener("click", function () {
+          logMessage("disconnectButton clicked.");
+          ws.close();
+        });
+
+      // // 发送消息
+      // document
+      //     .getElementById("sendButton")
+      //     .addEventListener("click", function () {
+      //         var message = document.getElementById("messageInput").value;
+      //         if (ws && ws.readyState === WebSocket.OPEN) {
+      //             ws.send(message);
+      //             logMessage("发送消息>>>: " + message);
+      //         } else {
+      //             logMessage("连接未打开");
+      //         }
+      //     });
+
+      // 显示日志信息
+      function logMessage(message) {
+        var log = document.getElementById("log");
+        var date = new Date();
+        var dateStr = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+        log.innerHTML += dateStr + " " + message + "<br>";
+        log.scrollTop = log.scrollHeight; // 滚动到最新消息
+      }
+
+      // 上传远程升级文件
+      document
+        .getElementById("select-file")
+        .addEventListener("change", function (event) {
+          file = event.target.files[0];
+
+          fileChunks = [];
+
+          if (file) {
+            logMessage("文件选中：" + file.name);
+
+            // 将文件分成小块
+            var chunkSize = 1024 * 8;  // 每块 8 KB
+            var totalChunks = Math.ceil(file.size / chunkSize);
+
+            for (var i = 0; i < totalChunks; i++) {
+              var start = i * chunkSize;
+              var end = Math.min(start + chunkSize, file.size);
+              fileChunks.push(file.slice(start, end));
+            }
+
+            logMessage("文件分割为 " + totalChunks + " 块");
+          }
+
+        });
+
+      // 驱动板升级
       document
         .getElementById("uploadButton")
         .addEventListener("click", function () {
-          if (file) {
-            uploadFile(file);
+          if (!file) {
+            logMessage("请选择文件进行上传！");
+            return;
           }
+
+          // 点击按钮后开始发送文件
+          sendNextChunk("05");
         });
 
-        // 上传文件到服务器
-        function uploadFile(file) {
-            var formData = new FormData();
-            formData.append("file", file);
+      // 下发驱动板参数文件
+      document
+        .getElementById("sendParameterButton")
+        .addEventListener("click", function () {
+          if (!file) {
+            logMessage("请选择文件进行上传！");
+            return;
+          }
 
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", "http://127.0.0.1:4000/advanced/upgrade", true);
+          // 点击按钮后开始发送文件
+          sendNextChunk("08");
+        });
 
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    logMessage('文件上传成功');
-                } else {
-                    logMessage('文件上传失败：' + xhr.statusText);
-                }
-            };
+      // 读取驱动板参数
+      document
+        .getElementById("readParameterButton")
+        .addEventListener("click", function () {
+          ws.send('READ_PARAMETER;09');
+        });
 
-            xhr.onerror = function () {
-                logMessage('文件上传失败');
-            };
+      // 上传主控板文件
+      document
+        .getElementById("uploadMainButton")
+        .addEventListener("click", function () {
+          if (!file) {
+            logMessage("请选择文件进行上传！");
+            return;
+          }
 
-            xhr.send(formData);
-            logMessage('正在上传文件：' + file.name);
+          // 点击按钮后开始发送文件
+          sendNextChunk("0C");
+        });
+
+      // 下发下发驱动板参数文件
+      document
+        .getElementById("sendMainParameterButton")
+        .addEventListener("click", function () {
+          if (!file) {
+            logMessage("请选择文件进行上传！");
+            return;
+          }
+
+          // 点击按钮后开始发送文件
+          sendNextChunk("0F");
+        });
+
+      // 下发下发驱动板参数文件
+      document
+        .getElementById("readMainParameterButton")
+        .addEventListener("click", function () {
+          ws.send('READ_PARAMETER;10');
+        });
+
+      // 切换模式
+      document
+        .getElementById("jiaozhun")
+        .addEventListener("click", function () {
+          ws.send('READ_PARAMETER;03');
+        });
+
+      document
+        .getElementById("pwm_test")
+        .addEventListener("click", function () {
+          ws.send('READ_PARAMETER;02');
+        });
+
+      document
+        .getElementById("jiaozhun_stop")
+        .addEventListener("click", function () {
+          ws.send('SPD;0');
+        });
+
+
+      // 发送下一个文件块
+      function sendNextChunk(type) {
+        ws.send("UPLOAD_START;" + type + ";" + file.size);
+
+        for (var index = 0; index < fileChunks.length; index++) {
+          var chunk = fileChunks[index];
+          ws.send(chunk);
+          logMessage('发送文件块 ' + (index + 1) + ' / ' + fileChunks.length);
         }
-      });
-    </script>
-  </head>
 
-  <body>
-    <div class="container">
-      <h1>主控板-高级管理</h1>
-      <button id="connectButton">连接</button>
-      <button id="disconnectButton">断开</button>
+        // 上传完成，发送结束标志
+        ws.send("UPLOAD_COMPLETE;" + type);
+        logMessage('文件上传完成');
+      }
+    });
+  </script>
+</head>
 
-      <div class="file-upload-container">
-        <input type="file" id="upgrade" />
-        <!-- 上传按钮 -->
-        <button id="uploadButton">发送文件</button>
-      </div>
+<body>
+  <div class="container">
+    <h1>主控板-高级管理</h1>
+    <button id="connectButton">连接</button>
+    <button id="disconnectButton">断开</button>
 
-      <div class="file-upload-container">
-        <label for="messageInput"></label
-        ><input type="text" id="messageInput" placeholder="输入消息" />
-        <button id="sendButton">发送</button>
-      </div>
+    <input type="file" id="select-file" />
 
-      <div class="file-upload-container">
-        <button id="jiaozhun">校准</button>
-        <button id="zhengchang">正常</button>
-      </div>
-
-      <div id="log"></div>
+    <div class="file-upload-container">
+      <button id="uploadButton">升级驱动板</button>
+      <button id="readParameterButton">读取驱动板参数</button>
+      <button id="sendParameterButton">下发驱动板参数</button>
     </div>
-  </body>
+
+    <div class="file-upload-container">
+      <button id="uploadMainButton">升级主控板</button>
+      <button id="readMainParameterButton">读取主控板参数</button>
+      <button id="sendMainParameterButton">下发主控板参数</button>
+    </div>
+
+    <!-- <div class="file-upload-container">
+      <label for="messageInput"></label><input type="text" id="messageInput" placeholder="输入消息" />
+      <button id="sendButton">发送</button>
+    </div> -->
+
+    <div class="file-upload-container">
+      <button id="jiaozhun">校准</button>
+      <button id="jiaozhun_stop">校准结束</button>
+      <button id="pwm_test">PWM</button>
+    </div>
+
+    <div id="log"></div>
+  </div>
+</body>
+
 </html>

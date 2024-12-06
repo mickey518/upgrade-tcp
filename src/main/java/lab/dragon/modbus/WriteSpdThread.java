@@ -26,6 +26,7 @@ public class WriteSpdThread extends Thread {
         /*
         0     1     2     3    4        5       6          7         8            9       10
         帧头  长度  检验和 模式  id低位    id高位  速度低位    速度高位    母线电压低位  母线电压高位  帧尾
+        AA0B000071c00000000055
          */
         while (!this.isInterrupted()) {
             if (spd.shortValue() != 0) {
