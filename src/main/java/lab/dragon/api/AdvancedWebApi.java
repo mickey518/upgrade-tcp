@@ -1,6 +1,7 @@
 package lab.dragon.api;
 
 import lab.dragon.common.util.ByteUtils;
+import lab.dragon.common.util.ThreadPoolUtil;
 import lab.dragon.config.ConstantConfiguration;
 import lab.dragon.modbus.RtuMasterHelper;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class AdvancedWebApi {
             log.info("接收到升级文件包，文件名：{}，文件大小：{}，文件类型：{}",fileName, upgradeFile.getSize(), upgradeFile.getContentType());
 
             RtuMasterHelper master = RtuMasterHelper.createMaster(ConstantConfiguration.commIds[3]);
-            master.listen();
+            ThreadPoolUtil.execute(master::listen);
 
             // 下发开始升级指令 AA  长度  校验和 模式  程序长度低字节    程序长度高字节 帧尾
             byte[] bytes = ByteUtils.short2BytesLittleEndian((int) upgradeFile.getSize());
