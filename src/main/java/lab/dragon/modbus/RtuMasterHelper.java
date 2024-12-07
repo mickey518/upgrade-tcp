@@ -1,7 +1,6 @@
 package lab.dragon.modbus;
 
 import com.fazecast.jSerialComm.SerialPort;
-import io.netty.buffer.ByteBufUtil;
 import lab.dragon.api.AdvancedWebSocket;
 import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.common.gson.GsonUtils;
@@ -12,6 +11,7 @@ import lab.dragon.entity.WsConnectMessageEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
@@ -102,7 +102,7 @@ public class RtuMasterHelper {
                     continue;
                 }
                 // 处理接收到的数据
-                log.info("[主控板]接收到数据: {}", ByteBufUtil.hexDump(buffer));
+                log.info("[主控板]接收到数据: {}", ByteUtils.hexString(buffer));
                 AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[收到数据]<<<"+ByteUtils.hexString(buffer));
                 switch (buffer[0]) {
                     case (byte) 0xAA:
@@ -336,7 +336,7 @@ public class RtuMasterHelper {
     }
 
     public void writeZeroSpd() throws IOException {
-        byte[] bytes = ByteBufUtil.decodeHexDump("AA0B000071c00000000055");
+        byte[] bytes = DatatypeConverter.parseHexBinary("AA0B000071c00000000055");
         bytes[4] = idTemp[0];
         bytes[5] = idTemp[1];
         writeCommand(bytes);

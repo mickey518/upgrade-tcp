@@ -2,13 +2,8 @@ package lab.dragon.api;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortInvalidPortException;
-import io.netty.buffer.ByteBufUtil;
-import lab.dragon.common.gson.GsonUtils;
-import lab.dragon.common.util.ByteUtils;
 import lab.dragon.common.util.ThreadPoolUtil;
 import lab.dragon.config.ConstantConfiguration;
-import lab.dragon.entity.WsConnectMessage;
-import lab.dragon.entity.WsConnectMessageEnum;
 import lab.dragon.modbus.RtuMasterHelper;
 import lab.dragon.util.CRC32MPEG2;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +14,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
+import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Objects;
@@ -41,10 +37,9 @@ public class AdvancedWebSocket {
     private Session session;
     private RtuMasterHelper masterHelper;
     private boolean uploading = false;
-    private int uploadFileSize = 0;
     private byte[] uploadFile = null;
 
-    private ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
     private ScheduledFuture<?> scheduleSendTestFuture;
 
     /**
@@ -101,7 +96,7 @@ public class AdvancedWebSocket {
     @OnMessage
     public void onMessage(String msg, Session session) {
         try {
-            log.info("[ws recv] session: {}, 收到消息 =》 {}", this.session.getId(), msg);
+            log.info("[ws recv] session: {}, 收到消息 <= {}", this.session.getId(), msg);
 
             if (StringUtils.startsWith(msg, "UPLOAD_START")) {
                 fileStream.reset();
@@ -146,7 +141,7 @@ public class AdvancedWebSocket {
                 }
             } else if (StringUtils.startsWith(msg, "READ_PARAMETER")) {
                 String type = StringUtils.substring(msg, 15);
-                this.masterHelper.writeMode(ByteBufUtil.decodeHexDump(type)[0]);
+                this.masterHelper.writeMode(DatatypeConverter.parseHexBinary(type)[0]);
             }  else if (StringUtils.startsWith(msg, "SPD;0")) {
                 this.masterHelper.writeZeroSpd();
             }

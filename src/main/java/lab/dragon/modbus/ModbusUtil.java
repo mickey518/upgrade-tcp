@@ -9,7 +9,6 @@ import com.serotonin.modbus4j.msg.ReadHoldingRegistersRequest;
 import com.serotonin.modbus4j.msg.ReadHoldingRegistersResponse;
 import com.serotonin.modbus4j.msg.WriteRegisterRequest;
 import com.serotonin.modbus4j.msg.WriteRegisterResponse;
-import io.netty.buffer.ByteBufUtil;
 import jssc.SerialPortException;
 import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.config.SensorProperty;
@@ -19,6 +18,7 @@ import lab.dragon.common.util.ByteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.DatatypeConverter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,18 +109,18 @@ public class ModbusUtil {
                 case "int":
                     int anInt;
                     if (propertyList.get(i).isUnsigned()) {
-                        anInt = Integer.parseUnsignedInt(ByteBufUtil.hexDump(bytes), 16);
+                        anInt = Integer.parseUnsignedInt(DatatypeConverter.printHexBinary(bytes), 16);
                     } else {
-                        anInt = Integer.parseInt(ByteBufUtil.hexDump(bytes), 16);
+                        anInt = Integer.parseInt(DatatypeConverter.printHexBinary(bytes), 16);
                     }
                     result.put(propertyList.get(i).getAddress(), propertyList.get(i).getOutputConvertFunc().apply(anInt));
                     break;
                 case "short":
                     short anShort;
                     if (propertyList.get(i).isUnsigned()) {
-                        anInt = Integer.parseUnsignedInt(ByteBufUtil.hexDump(bytes), 16);
+                        anInt = Integer.parseUnsignedInt(DatatypeConverter.printHexBinary(bytes), 16);
                     } else {
-                        anInt = Integer.parseInt(ByteBufUtil.hexDump(bytes), 16);
+                        anInt = Integer.parseInt(DatatypeConverter.printHexBinary(bytes), 16);
                     }
 
                     result.put(propertyList.get(i).getAddress(), propertyList.get(i).getOutputConvertFunc().apply(anInt));
@@ -130,11 +130,11 @@ public class ModbusUtil {
                     byte[] tmp = new byte[]{bytes[i * 2], bytes[i * 2 + 1]};
                     if (propertyList.get(i).isUnsigned()) {
                         for (int j = 0; j < shorts.length; j++) {
-                            shorts[i] = (short) Integer.parseUnsignedInt(ByteBufUtil.hexDump(tmp), 16);
+                            shorts[i] = (short) Integer.parseUnsignedInt(DatatypeConverter.printHexBinary(tmp), 16);
                         }
                     } else {
                         for (int j = 0; j < shorts.length; j++) {
-                            shorts[i] = (short) Integer.parseInt(ByteBufUtil.hexDump(tmp), 16);
+                            shorts[i] = (short) Integer.parseInt(DatatypeConverter.printHexBinary(tmp), 16);
                         }
                     }
                     result.put(propertyList.get(i).getAddress(), propertyList.get(i).getOutputConvertFunc().apply(shorts));

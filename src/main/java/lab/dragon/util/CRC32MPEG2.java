@@ -1,7 +1,5 @@
 package lab.dragon.util;
 
-import io.netty.buffer.ByteBufUtil;
-
 import javax.xml.bind.DatatypeConverter;
 
 public class CRC32MPEG2 {
@@ -43,10 +41,12 @@ public class CRC32MPEG2 {
 
     public static void main(String[] args) {
         String hexInput = "FFF364C40000000348000000004C414D455555554C414D45332E313030555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555";
-        byte[] inputBytes = javax.xml.bind.DatatypeConverter.parseHexBinary(hexInput);
+        byte[] inputBytes = DatatypeConverter.parseHexBinary(hexInput);
 
         int crc32Value = computeCRC32MPEG2(inputBytes);
         System.out.println("Final CRC32 Checksum: " + crc32Value);
         System.out.printf("Manual CRC32: 0x%08X\n", crc32Value); // 结果应该为 0x4803A057
+
+        System.out.println(DatatypeConverter.printHexBinary(inputBytes));
     }
 }
