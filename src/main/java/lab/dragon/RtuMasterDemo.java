@@ -25,7 +25,7 @@ public class RtuMasterDemo {
         };
         long summed = ByteUtils.sum(bytes);
         bytes[2] = (byte)(0xFF & summed);
-        System.out.println("sum: " + summed + "; 0xFF is: " + String.format("%02X", (byte)(0xFF & summed)) + "; bytes: " + ByteUtils.hexString(bytes));
+        System.out.println("sum: " + summed + "; 0xFF is: " + String.format("%02X", (byte)(0xFF & summed)) + "; bytes: " + ByteUtils.toHexPrettyString(bytes));
     }
 
     private static void createRtuMaster() throws Exception{

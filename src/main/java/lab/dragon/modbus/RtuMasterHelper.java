@@ -102,8 +102,8 @@ public class RtuMasterHelper {
                     continue;
                 }
                 // 处理接收到的数据
-                log.info("[主控板]接收到数据: {}", ByteUtils.hexString(buffer));
-                AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[收到数据]<<<"+ByteUtils.hexString(buffer));
+                log.info("[主控板]接收到数据: {}", ByteUtils.toHexPrettyString(buffer));
+                AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[收到数据]<<<"+ByteUtils.toHexPrettyString(buffer));
                 switch (buffer[0]) {
                     case (byte) 0xAA:
                         decodeMsgAA(buffer);
@@ -369,8 +369,8 @@ public class RtuMasterHelper {
     public void writeCommand(byte[] bytes) throws IOException {
         bytes[2] = (byte) ((byte) 0xFF & ByteUtils.sum(bytes));
 
-        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.hexString(bytes));
-        AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[下发命令]>>>"+ByteUtils.hexString(bytes));
+        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.toHexPrettyString(bytes));
+        AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[下发命令]>>>"+ByteUtils.toHexPrettyString(bytes));
         OutputStream outputStream = this.serialPort.getOutputStream();
         outputStream.write(bytes);
         outputStream.flush();
