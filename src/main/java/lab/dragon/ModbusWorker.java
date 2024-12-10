@@ -69,7 +69,7 @@ public class ModbusWorker implements Runnable {
                     result.put(6, anInt6);
                 }
 
-                log.info("传感器数据：{}", GsonUtils.toJson(result));
+//                log.info("动扭传感器数据：{}", GsonUtils.toJson(result));
                 ConnectionWebSocket.SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.resultSensor).json(GsonUtils.toJson(result)).build()));
             }
 

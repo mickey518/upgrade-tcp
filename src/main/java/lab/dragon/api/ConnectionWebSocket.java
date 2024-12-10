@@ -82,6 +82,7 @@ public class ConnectionWebSocket {
      * 报警信息代码映射表
      */
     private static Map<String, String> warnMessages;
+    private static boolean adjustment = false;
 
     /**
      * spring 注入完成后调用的，相当于构造函数
@@ -260,17 +261,40 @@ public class ConnectionWebSocket {
                 log.info("received write batt spd value: {}", wsConnectMessage.getJson());
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
-                this.masterHelper.writeSpd(map.get("spd"));
+                Integer spd = map.get("spd");
+                // 校准过程中不接收其他转速指令，除了0
+                if (!adjustment) {
+                    this.masterHelper.writeSpd(spd);
+                }
+
             } else if (WsConnectMessageEnum.writeMode.equals(wsConnectMessage.getType())) {
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
-                this.masterHelper.writeMode(map.get("mode"));
+                if (!adjustment) {
+                    this.masterHelper.writeMode(map.get("mode"));
+                }
+
             } else if (WsConnectMessageEnum.savelog.equals(wsConnectMessage.getType())) {
                 Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("操作记录-", ".txt"));
                 Files.createFile(logPath);
                 Files.write(logPath, wsConnectMessage.getJson().getBytes(StandardCharsets.UTF_8));
             } else if (WsConnectMessageEnum.writeParameter.equals(wsConnectMessage.getType())) {
                 writeParameter(GsonUtils.fromJson(wsConnectMessage.getJson()));
+            } else if (WsConnectMessageEnum.adjustment.equals(wsConnectMessage.getType())) {
+
+                // 校准过程中不接收其他指令
+                adjustment = true;
+                // 先将速度设置为 0
+                this.masterHelper.writeZeroSpd();
+                // 下发校准指令
+                this.masterHelper.writeMode(3);
+
+            } else if (WsConnectMessageEnum.adjustment_end.equals(wsConnectMessage.getType())) {
+                this.masterHelper.writeZeroSpd();
+                adjustment = false;
+            }  else if (WsConnectMessageEnum.stop.equals(wsConnectMessage.getType())) {
+                this.masterHelper.writeZeroSpd();
+                adjustment = false;
             }
         } catch (ClassCastException e) {
             String error = "数据类型转换错误，错误消息：" + e.getMessage();

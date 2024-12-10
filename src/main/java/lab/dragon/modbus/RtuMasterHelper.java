@@ -11,6 +11,7 @@ import lab.dragon.entity.WsConnectMessageEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -173,6 +174,11 @@ public class RtuMasterHelper {
             return;
         }
 
+        if (buffer[1] < 0x15) {
+            log.error("AA数据帧长度错误，跳过 【{}】", ByteUtils.toHexPrettyString(buffer));
+            return;
+        }
+
         int index = 0;
         // 帧头 0 0xAA
         byte head = buffer[index];
@@ -276,6 +282,13 @@ public class RtuMasterHelper {
         writeSpdThread.spd.set(spd);
     }
 
+    public void writeZeroSpd() throws IOException {
+        byte[] bytes = DatatypeConverter.parseHexBinary("AA0B000071c00000000055");
+        bytes[4] = idTemp[0];
+        bytes[5] = idTemp[1];
+        writeCommand(bytes);
+    }
+
     /**
      * 下发指令，切换至调试模式
      *
@@ -283,16 +296,19 @@ public class RtuMasterHelper {
      */
     public void writeMode(int mode) throws IOException {
         /*
-        0     1     2     3    4
-        帧头  长度  检验和 模式  帧尾
+        帧头  0  ｜长度 1  ｜校验和 2｜模式3 |id 低 4 | id 高 5 |帧尾6
+        --------------------------------------------------------------
+        0xA5    ｜0x05   ｜0x00   ｜0x00   ｜0x71   ｜0xC0   | 0x55
          */
-        byte[] bytes = new byte[5];
+        byte[] bytes = new byte[7];
 
         bytes[0] = (byte) 0xAA;
         bytes[bytes.length - 1] = (byte) 0x55;
         bytes[1] = (byte) bytes.length;
         bytes[2] = 0;
         bytes[3] = (byte) mode;
+        bytes[4] = idTemp[0];   //
+        bytes[5] = idTemp[1];   //
 
         writeCommand(bytes);
     }
@@ -300,7 +316,8 @@ public class RtuMasterHelper {
     public void writeCommand(byte[] bytes) throws IOException {
         bytes[2] = (byte) ((byte) 0xFF & ByteUtils.sum(bytes));
 
-        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.toHexPrettyString(bytes));
+        String format = String.format("[主控板] 下发命令 [%s]", ByteUtils.toHexPrettyString(bytes));
+        log.info(format);
         OutputStream outputStream = this.serialPort.getOutputStream();
         outputStream.write(bytes);
         outputStream.flush();
