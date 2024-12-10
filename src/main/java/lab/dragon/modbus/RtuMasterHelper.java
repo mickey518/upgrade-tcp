@@ -258,7 +258,7 @@ public class RtuMasterHelper {
     public void writeCommand(byte[] bytes) throws IOException {
         bytes[2] = (byte) ((byte) 0xFF & ByteUtils.sum(bytes));
 
-        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.hexString(bytes));
+        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.toHexPrettyString(bytes));
         OutputStream outputStream = this.serialPort.getOutputStream();
         outputStream.write(bytes);
         outputStream.flush();

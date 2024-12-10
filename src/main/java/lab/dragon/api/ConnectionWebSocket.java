@@ -320,6 +320,7 @@ public class ConnectionWebSocket {
                         // 转换错误码
                         String msg = warnMessages.get(warnCode);
                         warnStrings.add(msg);
+                        log.error("[伺服电机]报警：【{}】【{}】", warnCode, msg);
                     }
                 }
             }
