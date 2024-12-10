@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,8 +41,9 @@ public class RtuMasterHelper {
 
         if (!this.serialPort.openPort()) {
             log.error("[主控板]{}打开端口失败", port);
+        } else {
+            log.info("[主控板]{}打开端口成功", port);
         }
-        log.info("[主控板]{}打开端口", port);
     }
 
     public static RtuMasterHelper createMaster(String port) {
@@ -77,36 +79,76 @@ public class RtuMasterHelper {
          20 0x55    帧尾              55
          */
 
-        // 设置一个缓冲区来接收数据
-        byte[] bytes = new byte[128];
-        byte[] buffer;
-        int bytesRead;
-
         log.info("[主控板]开始接收数据...");
+        // 缓冲区初始化
+        ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
 
         // 持续监听数据
-        while (true) {
+        while (this.serialPort.isOpen()) {
             try {
                 // 从串口输入流读取数据
-                bytesRead = serialPort.readBytes(bytes, 21);
-                if (bytesRead < 5) {
-                    Thread.sleep(50);
+                byte[] tmpBytes = new byte[1024];
+                int bytesRead = serialPort.readBytes(tmpBytes, tmpBytes.length);
+                if (bytesRead < 0) {
                     continue;
                 }
-                // 串口有接收到数据
-                buffer = new byte[bytesRead];
-                System.arraycopy(bytes, 0, buffer, 0, bytesRead);
-                if (buffer[1] != bytesRead) {
+
+                // 截取有效数据
+                byte[] read = new byte[bytesRead];
+                System.arraycopy(tmpBytes, 0, read, 0, bytesRead);
+//                log.info("串口缓冲数据：{}", ByteUtils.toHexPrettyString(tmpBytes));
+
+                // 写入缓冲区
+                if (byteBuffer.remaining() < bytesRead) {
+                    log.warn("Buffer overflow risk. Compacting buffer.");
+                    // 压缩缓冲区
+                    byteBuffer.compact();
+                    if (byteBuffer.remaining() < bytesRead) {
+                        throw new IllegalStateException("Insufficient buffer capacity even after compacting.");
+                    }
+                }
+                byteBuffer.put(read);
+
+                // 检查缓冲区数据是否足够长
+                if (byteBuffer.position() <= 5) continue;
+
+                // 读取数据帧
+                byteBuffer.flip(); // 切换到读取模式
+
+                // 从AA 或 A5帧头开始读取
+                while (byteBuffer.hasRemaining()) {
+                    byte header = byteBuffer.get();
+                    if (header == (byte) 0xAA || header == (byte) 0xA5) {
+                        byteBuffer.position(byteBuffer.position() - 1);
+                        break;
+                    }
+                }
+
+                int len = byteBuffer.get(1) & 0xFF;
+
+                // 检查是否存在完整帧
+                if (byteBuffer.limit() < len) {
+                    // 返回写模式，等待更多数据
+                    byteBuffer.compact();
                     continue;
                 }
+
+                // 提取完整帧
+                byte[] buf2 = new byte[len];
+                byteBuffer.get(buf2, 0, len);
+
+                // 处理完帧后，调整缓冲区状态，清理已读取数据，准备接收新数据
+                byteBuffer.compact();
+
                 // 处理接收到的数据
-                log.info("[主控板]接收到数据: {}", ByteBufUtil.hexDump(buffer));
-                switch (buffer[0]) {
+                String tmp = String.format("[主控板]接收到数据[%s]: %s", len, ByteUtils.toHexPrettyString(buf2));
+                log.info(tmp);
+                switch (buf2[0]) {
                     case (byte) 0xAA:
-                        decodeMsgAA(buffer);
+                        decodeMsgAA(buf2);
                         break;
                     case (byte) 0xA5:
-                        decodeMsgA5(buffer);
+                        decodeMsgA5(buf2);
                         break;
                 }
 

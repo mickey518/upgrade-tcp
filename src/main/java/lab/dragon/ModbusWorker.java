@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 动纽传感器的读取线程
+ */
 public class ModbusWorker implements Runnable {
     private final Logger log = LoggerFactory.getLogger(ModbusWorker.class);
 

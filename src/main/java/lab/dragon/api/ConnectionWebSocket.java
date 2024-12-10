@@ -81,7 +81,7 @@ public class ConnectionWebSocket {
     /**
      * 报警信息代码映射表
      */
-    private Map<String, String> warnMessages;
+    private static Map<String, String> warnMessages;
 
     /**
      * spring 注入完成后调用的，相当于构造函数
@@ -116,7 +116,7 @@ public class ConnectionWebSocket {
 
         // 加载告警代码含义转换映射表
         try {
-            warnMessages = GsonUtils.loadFromFile("warn.json", Map.class);
+            ConnectionWebSocket.warnMessages = GsonUtils.loadFromFile("warn.json", Map.class);
         } catch (IOException e) {
             String error = "缺少报警信息转换映射表 warn.json";
             log.error(error);
@@ -318,14 +318,13 @@ public class ConnectionWebSocket {
                     warnCode = String.valueOf(tmp);
                     if (!"0".equals(warnCode)) {
                         // 转换错误码
-                        String msg = warnMessages.get(warnCode);
+                        String msg = ConnectionWebSocket.warnMessages.get(warnCode);
                         warnStrings.add(msg);
                         log.error("[伺服电机]报警：【{}】【{}】", warnCode, msg);
                     }
                 }
             }
         }
-
 
         if (!warnStrings.isEmpty()) {
             SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.warn).json(GsonUtils.toJson(warnStrings)).build()));
