@@ -31,6 +31,7 @@
       max-width: 1080px;
       width: 100%;
       padding: 20px;
+      margin-top: 10px;
       background-color: #1e1e1e;
       /* 深色背景 */
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -110,28 +111,47 @@
 
     /* 按钮样式 */
     button {
-      width: 20%;
+      width: 15%;
       height: 40px;
       background-color: #444;
       /* 深色按钮背景 */
       color: white;
-      border: 1px solid #66afe9;
+      border: 1px solid #4d4d4d;
       border-radius: 5px;
       font-size: 16px;
       cursor: pointer;
       transition: background-color 0.3s ease;
-      margin: 10px 5px 10px 0;
-    }
-
-    #disconnectButton {
-      background-color: #db3615;
-      /* 红色背景 */
+      margin: 10px 30px 5px 0;
     }
 
     button:hover {
-      background-color: #666;
+      background-color: #847e7e;
       /* 按钮悬停效果 */
     }
+
+    #connectButton {
+      background-color: #1f801b;
+      border: 1px solid #196816;
+      border-radius: 15px;
+      font-size: 24px;
+    }
+
+    #connectButton:hover {
+      background-color: #20d31a;
+    }
+
+    #disconnectButton {
+      background-color: #732312;
+      border: 1px solid #7b3535;
+      border-radius: 15px;
+      font-size: 24px;
+    }
+
+    #disconnectButton:hover {
+      background-color: #d33a1b;
+    }
+
+
 
     /* 日志区域样式 */
     #log {
@@ -151,132 +171,6 @@
     }
   </style>
 
-  <!-- <style>
-    /* 页面样式 */
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #b2d4c9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 95vh;
-      margin: 0;
-    }
-
-    h1 {
-      color: #333;
-      text-align: center;
-    }
-
-    /* 外部容器 */
-    .container {
-      min-width: 800px;
-      max-width: 1080px;
-      width: 100%;
-      padding: 20px;
-      background-color: #656363;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    /* Flexbox 布局：将按钮和输入框放在一行 */
-    .file-upload-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* 输入框样式 */
-    input[type="text"] {
-      width: 90%;
-      height: 40px;
-      padding: 1% 1% 1% 1%;
-      margin: 10px 5px 10px 0;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      outline: none;
-      background-color: #f9f9f9;
-      color: #333;
-      transition: all 0.3s ease;
-    }
-
-    input[type="text"]:focus {
-      border-color: #66afe9;
-      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
-    }
-
-    /* 文件上传输入框样式 */
-    input[type="file"] {
-      width: 58%;
-      padding: 10px;
-      margin: 10px 5px 10px 0;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      background-color: #f9f9f9;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    input[type="file"]:focus {
-      border-color: #66afe9;
-      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
-    }
-
-    /* 自定义上传按钮 */
-    input[type="file"]::-webkit-file-upload-button {
-      background-color: #375038;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    input[type="file"]::-webkit-file-upload-button:hover {
-      background-color: #375038;
-    }
-
-    /* 按钮样式 */
-    button {
-      width: 20%;
-      height: 40px;
-      background-color: #375038;
-      color: white;
-      border: 1px solid #66afe9;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      margin: 10px 5px 10px 0;
-    }
-
-    #disconnectButton {
-      background-color: #db3615;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    /* 日志区域样式 */
-    #log {
-      margin-top: 20px;
-      border: 1px solid #ccc;
-      height: 410px;
-      overflow-y: auto;
-      padding: 10px;
-      background-color: #f8f8f8;
-      border-radius: 5px;
-      text-align: left;
-      font-size: 14px;
-      color: #555;
-    }
-  </style> -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       var ws;
@@ -300,7 +194,7 @@
           };
 
           ws.onmessage = function (event) {
-            logMessage("收到消息<<<: " + event.data);
+            logMessage(event.data);
           };
 
           ws.onclose = function () {
@@ -312,7 +206,6 @@
       document
         .getElementById("disconnectButton")
         .addEventListener("click", function () {
-          logMessage("disconnectButton clicked.");
           ws.close();
         });
 
@@ -333,9 +226,18 @@
       function logMessage(message) {
         var log = document.getElementById("log");
         var date = new Date();
-        var dateStr = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+
+        var hourStr = date.getHours() >= 10 ? date.getHours() : "0" + date.getHours();
+        var minuStr = date.getMinutes() >= 10 ? date.getMinutes() : "0" + date.getMinutes();
+        var secoStr = date.getSeconds() >= 10 ? date.getSeconds() : "0" + date.getSeconds();
+
+        var dateStr = hourStr + ":" + minuStr + ":" + secoStr;
         log.innerHTML += dateStr + " " + message + "<br>";
-        log.scrollTop = log.scrollHeight; // 滚动到最新消息
+
+        var scroll = document.getElementById("autoScroll");
+        if (scroll.checked) {
+          log.scrollTop = log.scrollHeight; // 滚动到最新消息
+        }
       }
 
       // 上传远程升级文件
@@ -359,7 +261,7 @@
               fileChunks.push(file.slice(start, end));
             }
 
-            logMessage("文件分割为 " + totalChunks + " 块");
+            // logMessage("文件分割为 " + totalChunks + " 块");
           }
 
         });
@@ -449,6 +351,13 @@
           ws.send('SPD;0');
         });
 
+      document
+        .getElementById("autoScroll")
+        .addEventListener("click", function () {
+          var scroll = document.getElementById("autoScroll");
+          logMessage("checked: " + scroll.checked);
+        });
+
 
       // 发送下一个文件块
       function sendNextChunk(type) {
@@ -457,7 +366,7 @@
         for (var index = 0; index < fileChunks.length; index++) {
           var chunk = fileChunks[index];
           ws.send(chunk);
-          logMessage('发送文件块 ' + (index + 1) + ' / ' + fileChunks.length);
+          // logMessage('发送文件块 ' + (index + 1) + ' / ' + fileChunks.length);
         }
 
         // 上传完成，发送结束标志
@@ -471,8 +380,11 @@
 <body>
   <div class="container">
     <h1>主控板-高级管理</h1>
-    <button id="connectButton">连接</button>
-    <button id="disconnectButton">断开</button>
+
+    <div class="file-upload-container">
+      <button id="connectButton">连接</button>
+      <button id="disconnectButton">断开</button>
+    </div>
 
     <input type="file" id="select-file" />
 
@@ -499,6 +411,10 @@
       <button id="pwm_test">PWM</button>
     </div>
 
+    <div>
+      <label>自动滚动</label>
+      <input id="autoScroll" type="checkbox" checked />
+    </div>
     <div id="log"></div>
   </div>
 </body>

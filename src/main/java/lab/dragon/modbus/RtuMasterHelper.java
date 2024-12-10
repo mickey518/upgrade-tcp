@@ -5,6 +5,7 @@ import lab.dragon.api.AdvancedWebSocket;
 import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.common.util.ByteUtils;
+import lab.dragon.common.util.DateTimeUtils;
 import lab.dragon.config.SerialPortConfig;
 import lab.dragon.entity.WsConnectMessage;
 import lab.dragon.entity.WsConnectMessageEnum;
@@ -14,6 +15,12 @@ import org.slf4j.LoggerFactory;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,8 +35,14 @@ public class RtuMasterHelper {
     private static final Logger log = LoggerFactory.getLogger(RtuMasterHelper.class);
     public final AtomicBoolean isContinued = new AtomicBoolean(false);
     private final SerialPort serialPort;
-    private final byte[] idTemp = new byte[2];
+    private final byte[] idTemp = new byte[]{0, 0};
+    int chunkSize = 128; // 128
+    long currented = System.currentTimeMillis();
     private WriteSpdThread writeSpdThread = null;
+
+    public SerialPort getSerialPort() {
+        return this.serialPort;
+    }
 
     private RtuMasterHelper(String port) {
         SerialPortConfig serialPortConfig = new SerialPortConfig(port);
@@ -40,10 +53,26 @@ public class RtuMasterHelper {
         this.serialPort.setNumStopBits(serialPortConfig.getStopBits());
         this.serialPort.setParity(serialPortConfig.getParity());
 
+        String tmp;
         if (!this.serialPort.openPort()) {
-            log.error("[主控板]{}打开端口失败", port);
+            tmp = String.format("[主控板]%s打开端口失败", port);
+            log.error(tmp);
+        } else {
+            tmp = String.format("[主控板]%s打开端口成功", port);
+            log.info("[主控板]{}打开端口成功", port);
         }
-        log.info("[主控板]{}打开端口", port);
+        AdvancedWebSocket.SEND_MESSAGE_QUEUE.add(tmp);
+
+        byte[] bytes = new byte[0];
+        try {
+            bytes = Files.readAllBytes(Paths.get("driver-ids"));
+            if (bytes.length >= 2) {
+                idTemp[0] = bytes[0];
+                idTemp[1] = bytes[1];
+            }
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
     public static RtuMasterHelper createMaster(String port) {
@@ -79,44 +108,80 @@ public class RtuMasterHelper {
          20 0x55    帧尾              55
          */
 
-        // 设置一个缓冲区来接收数据
-        byte[] bytes = new byte[128];
-        byte[] buffer;
-        int bytesRead;
-
         log.info("[主控板]开始接收数据...");
+        // 缓冲区初始化（根据最大数据帧长度分配）
+        ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
 
         // 持续监听数据
-        while (true) {
+        while (this.serialPort.isOpen()) {
             try {
-                // 从串口输入流读取数据
-                bytesRead = serialPort.readBytes(bytes, 40);
-                if (bytesRead < 5) {
-                    Thread.sleep(50);
+                // 从串口读取数据
+                byte[] tmpBytes = new byte[1024];
+                int bytesRead = serialPort.readBytes(tmpBytes, tmpBytes.length);
+                if (bytesRead <= 0) continue;
+
+                // 截取有效数据
+                byte[] read = new byte[bytesRead];
+                System.arraycopy(tmpBytes, 0, read, 0, bytesRead);
+                log.info("串口缓冲数据: {}", ByteUtils.toHexPrettyString(read));
+
+                // 写入缓冲区
+                if (byteBuffer.remaining() < bytesRead) {
+                    log.warn("Buffer overflow risk. Compacting buffer.");
+                    byteBuffer.compact(); // 压缩缓冲区
+                    if (byteBuffer.remaining() < bytesRead) {
+                        throw new IllegalStateException("Insufficient buffer capacity even after compacting.");
+                    }
+                }
+                byteBuffer.put(read);
+
+                // 检查缓冲区数据是否足够长
+                if (byteBuffer.position() <= 5) continue; // 数据帧最小长度不足
+
+                // 读取数据帧长度字段
+                byteBuffer.flip(); // 切换到读取模式
+
+                while (byteBuffer.hasRemaining()) {
+                    byte header = byteBuffer.get();
+                    if (header == (byte) 0xAA || header == (byte) 0xA5) {
+                        byteBuffer.position(byteBuffer.position() - 1);
+                        break;
+                    } else {
+                        System.out.println("无效字节：" + String.format("0x%02X", header));
+                    }
+                }
+
+                int len = byteBuffer.get(1) & 0xFF; // 确保 len 是无符号值
+
+                // 检查是否存在完整帧
+                if (byteBuffer.limit() < len) {
+                    byteBuffer.compact(); // 返回写模式，等待更多数据
                     continue;
                 }
-                // 串口有接收到数据
-                buffer = new byte[bytesRead];
-                System.arraycopy(bytes, 0, buffer, 0, bytesRead);
-                if (buffer[1] != bytesRead) {
-                    continue;
-                }
+                // 提取完整帧数据
+                byte[] buf2 = new byte[len];
+                byteBuffer.get(buf2, 0, len);
+
+                // 处理完帧后，调整缓冲区状态
+                byteBuffer.compact(); // 清理已读取数据，准备接收新数据
+
                 // 处理接收到的数据
-                log.info("[主控板]接收到数据: {}", ByteUtils.toHexPrettyString(buffer));
-                AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[收到数据]<<<"+ByteUtils.toHexPrettyString(buffer));
-                switch (buffer[0]) {
+                String tmp = String.format("[主控板]接收到数据[%s]: %s", len, ByteUtils.toHexPrettyString(buf2));
+                log.info(tmp);
+                AdvancedWebSocket.SEND_MESSAGE_QUEUE.add(tmp);
+                switch (buf2[0]) {
                     case (byte) 0xAA:
-                        decodeMsgAA(buffer);
+                        decodeMsgAA(buf2);
                         break;
                     case (byte) 0xA5:
-                        decodeMsgA5(buffer);
+                        decodeMsgA5(buf2);
                         break;
                 }
 
                 Thread.sleep(100);
+
             } catch (Exception e) {
                 log.error("[主控板] 读取数据错误，错误消息： {}", e.getMessage(), e);
-                break;
             }
         }
     }
@@ -134,18 +199,36 @@ public class RtuMasterHelper {
          */
         byte code = buffer[3];
         if (code == 0) {
+            // 接收到A5回复，可以继续发包
             isContinued.set(true);
+            currented = System.currentTimeMillis();
         } else if (code == 1) {
             isContinued.set(false);
             log.error("CRC错误");
         } else if (code == 2) {
             isContinued.set(false);
-            log.error("长度错误");
+            log.error("校验错误");
+        }
+        if (buffer[1] == (byte) 0x09 || buffer[1] == (byte) 0x27) {
+            byte[] tmp = new byte[buffer.length - 7];
+            System.arraycopy(buffer, 6, tmp, 0, tmp.length);
+            String str = "parameters";
+            try {
+                Path folder = Paths.get(str);
+                if (Files.notExists(folder)) {
+                    Files.createDirectory(folder);
+                }
+                Path paramPath = Paths.get(str, DateTimeUtils.generateFileName("param-", ".bin"));
+                Files.write(paramPath, tmp);
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
         }
     }
 
     /**
      * 开始升级驱动板
+     *
      * @param fileSize
      * @throws IOException
      */
@@ -163,20 +246,38 @@ public class RtuMasterHelper {
         command[7] = bytes[1];
         command[8] = (byte) 0x55;
 
+        currented = System.currentTimeMillis();
         writeCommand(command);
         isContinued.set(false);
+
+        while (true) {
+            if (!isContinued.get()) {
+                if (System.currentTimeMillis() - currented > 3000) {
+                    log.error("3秒未收到A5回复，重发数据包");
+                    currented = System.currentTimeMillis();
+                    command[2] = 0;
+                    writeCommand(command);
+                    isContinued.set(false);
+                }
+            } else {
+                log.warn("收到回复，退出");
+                break;
+            }
+        }
     }
 
     public void sendUpgradeFile(byte[] buffer, byte mode) throws IOException {
         // 下发升级包
         int readCount = 0;
         int readSize = 0;
+
+
         for (int i = 0; i < calculateChunksLength(buffer); i++) {
-            int address = i * 128;
+            int address = i * chunkSize;
             byte[] bytes1 = ByteUtils.short2BytesLittleEndian(address);
             while (true) {
                 if (isContinued.get()) {
-                    byte[] filePart = new byte[(buffer.length < 128 ? buffer.length : 128) + 9];
+                    byte[] filePart = new byte[(buffer.length < chunkSize ? buffer.length : chunkSize) + 9];
                     filePart[0] = (byte) 0xAA;   // 帧头
                     filePart[1] = (byte) filePart.length;   // 长度
                     filePart[2] = (byte) 0x00;   // 校验和
@@ -187,12 +288,29 @@ public class RtuMasterHelper {
                     filePart[7] = bytes1[1];
                     filePart[filePart.length - 1] = (byte) 0x55;
 
-                    readSize = buffer.length - readCount < 128 ? buffer.length - readCount : 128;
+                    readSize = buffer.length - readCount < chunkSize ? buffer.length - readCount : chunkSize;
                     System.arraycopy(buffer, address, filePart, 8, readSize);
                     readCount += readSize;
 
+                    currented = System.currentTimeMillis();
                     writeCommand(filePart);
                     isContinued.set(false);
+
+                    while (true) {
+                        if (!isContinued.get()) {
+                            if (System.currentTimeMillis() - currented > 3000) {
+                                log.error("3秒未收到A5回复，重发数据包");
+                                currented = System.currentTimeMillis();
+                                filePart[2] = 0;
+                                writeCommand(filePart);
+                                isContinued.set(false);
+                            }
+                        } else {
+                            log.warn("收到回复，退出");
+                            break;
+                        }
+                    }
+
                     break;
                 }
             }
@@ -229,6 +347,10 @@ public class RtuMasterHelper {
     private void decodeMsgAA(byte[] buffer) {
         if (!checkSum(buffer)) {
             log.error("校验和错误，跳过");
+            return;
+        }
+
+        if (buffer[1] < 0x15) {
             return;
         }
 
@@ -329,6 +451,13 @@ public class RtuMasterHelper {
             writeSpdThread = new WriteSpdThread(this, idTemp);
             writeSpdThread.start();
         }
+
+        // id写入到文件
+        try {
+            Files.write(Paths.get("driver-ids"), new byte[] {idTemp[0], idTemp[1]});
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
     public void writeSpd(Integer spd) throws IOException {
@@ -369,14 +498,18 @@ public class RtuMasterHelper {
     public void writeCommand(byte[] bytes) throws IOException {
         bytes[2] = (byte) ((byte) 0xFF & ByteUtils.sum(bytes));
 
-        log.info("[主控板][{}] 下发命令 [{}]", this.serialPort.getSystemPortName(), ByteUtils.toHexPrettyString(bytes));
-        AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("[下发命令]>>>"+ByteUtils.toHexPrettyString(bytes));
+        String format = String.format("[主控板] 下发命令 [%s]", ByteUtils.toHexPrettyString(bytes));
+        log.info(format);
+        AdvancedWebSocket.SEND_MESSAGE_QUEUE.add(format);
         OutputStream outputStream = this.serialPort.getOutputStream();
         outputStream.write(bytes);
         outputStream.flush();
     }
 
     private boolean checkSum(byte[] buffer) {
+        if (buffer.length < 2) {
+            return false;
+        }
         byte[] bytes = new byte[buffer.length];
         System.arraycopy(buffer, 0, bytes, 0, bytes.length);
         bytes[2] = 0;
@@ -393,6 +526,6 @@ public class RtuMasterHelper {
 
     private int calculateChunksLength(byte[] buffer) {
         // 计算商，如果不能整除，则加1
-        return (buffer.length % 128 == 0) ? buffer.length / 128 : (buffer.length / 128) + 1;
+        return (buffer.length % chunkSize == 0) ? buffer.length / chunkSize : (buffer.length / chunkSize) + 1;
     }
 }

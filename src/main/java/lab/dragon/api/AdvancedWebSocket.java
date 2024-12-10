@@ -70,11 +70,10 @@ public class AdvancedWebSocket {
      */
     @OnOpen
     public void onOpen(Session session) {
+        log.info("[ws]创建一个连接：{}", session.getId());
         this.session = session;
 
         loadModbusConfig();
-
-        log.info("[ws]创建一个连接：{}", session.getId());
 
         this.scheduleSendTestFuture = ThreadPoolUtil.getScheduledExecutor().scheduleWithFixedDelay(() -> {
             try {
@@ -85,7 +84,7 @@ public class AdvancedWebSocket {
             } catch (IOException | InterruptedException e) {
                 log.error(e.getMessage(), e);
             }
-        }, 0, 5, TimeUnit.MILLISECONDS);
+        }, 0, 1, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -146,7 +145,9 @@ public class AdvancedWebSocket {
                 this.masterHelper.writeZeroSpd();
             }
         } catch (IOException e) {
+            this.masterHelper.isContinued.set(false);
             log.error(e.getMessage(), e);
+            SEND_MESSAGE_QUEUE.add("下发命令失败");
         }
     }
 
@@ -178,6 +179,7 @@ public class AdvancedWebSocket {
         }
         if (this.masterHelper != null) {
             this.masterHelper.isContinued.set(false);
+            this.masterHelper.getSerialPort().closePort();
             this.masterHelper.close();
         }
 
