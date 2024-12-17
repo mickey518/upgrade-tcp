@@ -17,10 +17,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,10 +37,6 @@ public class RtuMasterHelper {
     int chunkSize = 128; // 128
     long currented = System.currentTimeMillis();
     private WriteSpdThread writeSpdThread = null;
-
-    public SerialPort getSerialPort() {
-        return this.serialPort;
-    }
 
     private RtuMasterHelper(String port) {
         SerialPortConfig serialPortConfig = new SerialPortConfig(port);
@@ -77,6 +71,10 @@ public class RtuMasterHelper {
 
     public static RtuMasterHelper createMaster(String port) {
         return new RtuMasterHelper(port);
+    }
+
+    public SerialPort getSerialPort() {
+        return this.serialPort;
     }
 
     public void listen() {
@@ -209,20 +207,40 @@ public class RtuMasterHelper {
             isContinued.set(false);
             log.error("校验错误");
         }
-        if (buffer[1] == (byte) 0x09 || buffer[1] == (byte) 0x27) {
-            byte[] tmp = new byte[buffer.length - 7];
-            System.arraycopy(buffer, 6, tmp, 0, tmp.length);
-            String str = "parameters";
-            try {
-                Path folder = Paths.get(str);
-                if (Files.notExists(folder)) {
-                    Files.createDirectory(folder);
-                }
-                Path paramPath = Paths.get(str, DateTimeUtils.generateFileName("param-", ".bin"));
-                Files.write(paramPath, tmp);
-            } catch (IOException e) {
-                log.error(e.getMessage(), e);
+        if (buffer[1] != (byte) 0x09 && buffer[1] != (byte) 0x29) {
+            return;
+        }
+        byte[] tmpBuffer;
+        String folder = "parameters";
+        String fileNamePrefix;
+        switch (buffer[1]) {
+            case (byte) 0x29: {
+                // 返回的数据是驱动板参数,驱动板参数这里本来是32个字节，现在要增加2个字节的 FFFF
+                tmpBuffer = new byte[buffer.length - 7]; //  + 2
+                System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
+                tmpBuffer[tmpBuffer.length - 2] = (byte) 0xFF;
+                tmpBuffer[tmpBuffer.length - 1] = (byte) 0xFF;
+                fileNamePrefix = "驱动板参数-";
+                break;
+            } case (byte) 0x09: {
+                tmpBuffer = new byte[buffer.length - 7];
+                System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
+                fileNamePrefix = "主控板参数-";
+                break;
+            } default:
+                tmpBuffer = new byte[0];
+                fileNamePrefix = "参数-";
+                break;
+        }
+        try {
+            Path fold = Paths.get(folder);
+            if (Files.notExists(fold)) {
+                Files.createDirectory(fold);
             }
+            Path paramPath = Paths.get(folder, DateTimeUtils.generateFileName(fileNamePrefix, ".bin"));
+            Files.write(paramPath, tmpBuffer);
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -454,7 +472,7 @@ public class RtuMasterHelper {
 
         // id写入到文件
         try {
-            Files.write(Paths.get("driver-ids"), new byte[] {idTemp[0], idTemp[1]});
+            Files.write(Paths.get("driver-ids"), new byte[]{idTemp[0], idTemp[1]});
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }

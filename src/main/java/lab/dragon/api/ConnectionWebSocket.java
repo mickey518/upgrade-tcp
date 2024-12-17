@@ -67,7 +67,7 @@ public class ConnectionWebSocket {
      * 读取传感器数据的定时线程
      */
     private ScheduledFuture<?> scheduledReadSensorFuture;
-    private ScheduledFuture<?> scheduleSendTestFuture;
+//    private ScheduledFuture<?> scheduleSendTestFuture;
     private SerialPortConfig sensorPortConfig;
     private ModbusWorker modbusWorker;
     private RtuMasterHelper masterHelper;
@@ -181,16 +181,27 @@ public class ConnectionWebSocket {
 
         log.info("[ws]创建一个连接：{}，连接总量：{}", session.getId(), onlineCount.addAndGet(1));
 
-        this.scheduleSendTestFuture = ThreadPoolUtil.getScheduledExecutor().scheduleWithFixedDelay(() -> {
-            try {
-                if (!SEND_MESSAGE_QUEUE.isEmpty()) {
+        ThreadPoolUtil.execute(() -> {
+            while (this.session.isOpen()) {
+                try {
                     String take = SEND_MESSAGE_QUEUE.take();
                     session.getBasicRemote().sendText(take);
+                } catch (IOException | InterruptedException e) {
+                    log.error(e.getMessage(), e);
                 }
-            } catch (IOException | InterruptedException e) {
-                log.error(e.getMessage(), e);
             }
-        }, 0, 5, TimeUnit.MILLISECONDS);
+        });
+
+//        this.scheduleSendTestFuture = ThreadPoolUtil.getScheduledExecutor().scheduleWithFixedDelay(() -> {
+//            try {
+//                if (!SEND_MESSAGE_QUEUE.isEmpty()) {
+//                    String take = SEND_MESSAGE_QUEUE.take();
+//                    session.getBasicRemote().sendText(take);
+//                }
+//            } catch (IOException | InterruptedException e) {
+//                log.error(e.getMessage(), e);
+//            }
+//        }, 0, 1, TimeUnit.MILLISECONDS);
 
         // 定时获取伺服控制器报警记录的定时线程
         this.scheduledReadServoFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(() -> {
@@ -332,9 +343,9 @@ public class ConnectionWebSocket {
             this.modbusWorker.close();
         }
 
-        if (this.scheduleSendTestFuture != null) {
-            this.scheduleSendTestFuture.cancel(false);
-        }
+//        if (this.scheduleSendTestFuture != null) {
+//            this.scheduleSendTestFuture.cancel(false);
+//        }
         if (this.masterHelper != null) {
             this.masterHelper.close();
         }
