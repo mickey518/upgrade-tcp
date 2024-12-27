@@ -35,9 +35,9 @@ public class ModbusUtil {
         SerialPortWrapperImpl serialPortWrapper = new SerialPortWrapperImpl(this.serialPortConfig.getCommPortId(), this.serialPortConfig.getBaudRate(), this.serialPortConfig.getDataBits(), this.serialPortConfig.getStopBits(), this.serialPortConfig.getParity());
         ModbusFactory modbusFactory = new ModbusFactory();
         this.master = modbusFactory.createRtuMaster(serialPortWrapper);
-        log.info("[modbus][{}]初始化串口连接；{}", this.serialPortConfig.getCommPortId(), serialPortWrapper.toString());
+        log.info("[伺服电机][{}]初始化串口连接；{}", this.serialPortConfig.getCommPortId(), serialPortWrapper.toString());
         this.master.init();
-        log.info("[modbus][{}]串口连接成功！", this.serialPortConfig.getCommPortId());
+        log.info("[伺服电机][{}]串口连接成功！", this.serialPortConfig.getCommPortId());
 
     }
 
@@ -84,7 +84,6 @@ public class ModbusUtil {
             WriteRegisterRequest request = new WriteRegisterRequest(this.serialPortConfig.getSlaveId(), offset, value);
 
             WriteRegisterResponse response = (WriteRegisterResponse) this.master.send(request);
-
 
             if (response.isException()) {
                 log.error("[modbus][{}]写保持寄存器错误，错误信息是: {}", this.serialPortConfig.getCommPortId(), response.getExceptionMessage());

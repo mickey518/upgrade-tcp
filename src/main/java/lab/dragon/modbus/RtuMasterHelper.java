@@ -84,7 +84,7 @@ public class RtuMasterHelper {
 
         /*
          0  0xAA    帧头              AA
-         1  0x13    长度              13
+         1  0x15    长度              15
          2  0x     校验和              00
          3  0x00    error             00
          4  0x00    id-1              00
@@ -176,10 +176,9 @@ public class RtuMasterHelper {
                         break;
                 }
 
-                Thread.sleep(100);
-
             } catch (Exception e) {
                 log.error("[主控板] 读取数据错误，错误消息： {}", e.getMessage(), e);
+                break;
             }
         }
     }
@@ -369,6 +368,7 @@ public class RtuMasterHelper {
         }
 
         if (buffer[1] < 0x15) {
+            log.error("AA数据帧长度错误，跳过 【{}】", ByteUtils.toHexPrettyString(buffer));
             return;
         }
 

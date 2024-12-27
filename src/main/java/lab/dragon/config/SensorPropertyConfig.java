@@ -19,7 +19,7 @@ public class SensorPropertyConfig {
 
     private static void configServoWarn() {
         servoWarnPropertyList.add(SensorProperty.builder().slaveId(1)
-                .address(2000).length(10).aClass(short[].class).unsigned(true)
+                .address(2000).length(20).aClass(short[].class).unsigned(true)
                 .outputConvertFunc(x -> x).build());
     }
 

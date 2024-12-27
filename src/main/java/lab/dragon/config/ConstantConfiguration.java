@@ -1,5 +1,8 @@
 package lab.dragon.config;
 
+/**
+ * @author mickey.wang
+ */
 public class ConstantConfiguration {
     /**
      * 串口列表

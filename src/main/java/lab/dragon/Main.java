@@ -26,13 +26,14 @@ public class Main {
 
         SensorPropertyConfig.config();
 
-        configCommPortId();
+        configCommPort();
     }
 
-    private static void configCommPortId() {
-        // 读取串口配置文件
+    private static void configCommPort() {
         try {
+            // 读取串口配置文件
             Path commPortConfigFile = Paths.get("com-port.txt");
+            // 判断文件是否存在
             if (Files.notExists(commPortConfigFile)) {
                 String error = "缺少配置文件 [com-port.txt]，需要提供串口配置文件；配置文件中第一个表示伺服控制器串口，第二个表示传感器串口";
                 log.error(error);
@@ -53,7 +54,7 @@ public class Main {
                 ConstantConfiguration.commIds[2] = split[2];
             }
         } catch (IOException e) {
-            String error = "串口配置文件 [com-port.txt] 无法打开";
+            String error = "串口配置文件 【com-port.txt】 无法打开";
             log.error(error);
         }
     }

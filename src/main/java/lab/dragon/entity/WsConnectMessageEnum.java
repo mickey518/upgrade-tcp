@@ -28,6 +28,12 @@ public enum WsConnectMessageEnum {
     warn,
     @SerializedName("error")
     error,
+    @SerializedName("adjustment")
+    adjustment,
+    @SerializedName("adjustment_end")
+    adjustment_end,
+    @SerializedName("stop")
+    stop,
     @SerializedName("upgrade")
     upgrade
 }

@@ -67,25 +67,30 @@ public class ConnectionWebSocket {
      * 读取传感器数据的定时线程
      */
     private ScheduledFuture<?> scheduledReadSensorFuture;
-//    private ScheduledFuture<?> scheduleSendTestFuture;
-    private SerialPortConfig sensorPortConfig;
+
+    /**
+     * 动扭传感器处理线程
+     */
     private ModbusWorker modbusWorker;
+    /**
+     * 主控板处理线程
+     */
     private RtuMasterHelper masterHelper;
     /**
      * 报警信息代码映射表
      */
-    private Map<String, String> warnMessages;
+    private static Map<String, String> warnMessages;
+    private static boolean adjustment = false;
 
     /**
      * spring 注入完成后调用的，相当于构造函数
      */
     @PostConstruct
     public void onComponent() {
-        log.info("websocket post construct!!!");
 
         // 加载告警代码含义转换映射表
         try {
-            warnMessages = GsonUtils.loadFromFile("warn.json", Map.class);
+            ConnectionWebSocket.warnMessages = GsonUtils.loadFromFile("warn.json", Map.class);
         } catch (IOException e) {
             String error = "缺少报警信息转换映射表 warn.json";
             log.error(error);
@@ -128,7 +133,6 @@ public class ConnectionWebSocket {
         // 打开伺服电机控制端口
         String commId = ConstantConfiguration.commIds[0];
         try {
-            SerialPort.getCommPort(commId);
             SerialPortConfig serialPortConfig = new SerialPortConfig(commId);
             serialPortConfig.setStartIndex(0);
             servoModbusUtil = new ModbusUtil(serialPortConfig);
@@ -142,8 +146,7 @@ public class ConnectionWebSocket {
         commId = ConstantConfiguration.commIds[1];
         try {
             // 创建一个定时获取传感器数据的计划线程
-            SerialPort.getCommPort(commId);
-            sensorPortConfig = new SerialPortConfig(commId);
+            SerialPortConfig sensorPortConfig = new SerialPortConfig(commId);
             sensorPortConfig.setStartIndex(0);
             this.modbusWorker = new ModbusWorker(sensorPortConfig);
             this.scheduledReadSensorFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(this.modbusWorker, 373, 100, TimeUnit.MILLISECONDS);
@@ -155,7 +158,6 @@ public class ConnectionWebSocket {
 
         commId = ConstantConfiguration.commIds[2];
         try {
-            SerialPort.getCommPort(commId);
             this.masterHelper = RtuMasterHelper.createMaster(commId);
             ThreadPoolUtil.execute(() -> this.masterHelper.listen());
         } catch (SerialPortInvalidPortException e) {
@@ -173,14 +175,11 @@ public class ConnectionWebSocket {
      */
     @OnOpen
     public void onOpen(Session session) {
-        this.session = session;
-
-        readParameter();
-
-        loadModbusConfig();
-
         log.info("[ws]创建一个连接：{}，连接总量：{}", session.getId(), onlineCount.addAndGet(1));
 
+        this.session = session;
+
+        // 连上 websocket 时，监听 websocket 发送队列，有数据时发送到 socket 前端，session 关闭时，循环中断。
         ThreadPoolUtil.execute(() -> {
             while (this.session.isOpen()) {
                 try {
@@ -192,16 +191,9 @@ public class ConnectionWebSocket {
             }
         });
 
-//        this.scheduleSendTestFuture = ThreadPoolUtil.getScheduledExecutor().scheduleWithFixedDelay(() -> {
-//            try {
-//                if (!SEND_MESSAGE_QUEUE.isEmpty()) {
-//                    String take = SEND_MESSAGE_QUEUE.take();
-//                    session.getBasicRemote().sendText(take);
-//                }
-//            } catch (IOException | InterruptedException e) {
-//                log.error(e.getMessage(), e);
-//            }
-//        }, 0, 1, TimeUnit.MILLISECONDS);
+        readParameter();
+
+        loadModbusConfig();
 
         // 定时获取伺服控制器报警记录的定时线程
         this.scheduledReadServoFuture = ThreadPoolUtil.getScheduledExecutor().scheduleAtFixedRate(() -> {
@@ -228,9 +220,9 @@ public class ConnectionWebSocket {
 
         try {
             WsConnectMessage wsConnectMessage = GsonUtils.fromJson(msg, WsConnectMessage.class);
-            log.info("{}", wsConnectMessage.toString());
+
             if (WsConnectMessageEnum.write.equals(wsConnectMessage.getType())) {
-                log.info("received write command: {}", wsConnectMessage.getJson());
+
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 for (Map.Entry<String, Integer> entry : map.entrySet()) {
                     int key = Integer.parseInt(entry.getKey());
@@ -243,17 +235,41 @@ public class ConnectionWebSocket {
                 log.info("received write batt spd value: {}", wsConnectMessage.getJson());
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
-                this.masterHelper.writeSpd(map.get("spd"));
+                Integer spd = map.get("spd");
+                // 校准过程中不接收其他转速指令，除了0
+                if (!adjustment) {
+                    this.masterHelper.writeSpd(spd);
+                }
+
             } else if (WsConnectMessageEnum.writeMode.equals(wsConnectMessage.getType())) {
                 Map<String, Integer> map = GsonUtils.fromJsonToMap(wsConnectMessage.getJson(), String.class, Integer.class);
                 // 下发速度参数
-                this.masterHelper.writeMode(map.get("mode"));
+                if (!adjustment) {
+                    this.masterHelper.writeMode(map.get("mode"));
+                }
+
             } else if (WsConnectMessageEnum.savelog.equals(wsConnectMessage.getType())) {
                 Path logPath = Paths.get("logs", DateTimeUtils.generateFileName("操作记录-", ".txt"));
                 Files.createFile(logPath);
                 Files.write(logPath, wsConnectMessage.getJson().getBytes(StandardCharsets.UTF_8));
             } else if (WsConnectMessageEnum.writeParameter.equals(wsConnectMessage.getType())) {
                 writeParameter(GsonUtils.fromJson(wsConnectMessage.getJson()));
+            } else if (WsConnectMessageEnum.adjustment.equals(wsConnectMessage.getType())) {
+
+                // 校准过程中不接收其他指令
+                adjustment = true;
+                // 先将速度设置为 0
+                this.masterHelper.writeZeroSpd();
+                // 下发校准指令
+                this.masterHelper.writeMode(3);
+
+            } else if (WsConnectMessageEnum.adjustment_end.equals(wsConnectMessage.getType())) {
+                this.masterHelper.writeZeroSpd();
+                adjustment = false;
+            }  else if (WsConnectMessageEnum.stop.equals(wsConnectMessage.getType())) {
+                this.masterHelper.writeZeroSpd();
+                this.masterHelper.writeSpd(0);
+                adjustment = false;
             }
         } catch (ClassCastException e) {
             String error = "数据类型转换错误，错误消息：" + e.getMessage();
@@ -288,6 +304,12 @@ public class ConnectionWebSocket {
         SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.result).json(GsonUtils.toJson(result)).build()));
     }
 
+    /**
+     * 读取寄存器中的报警记录
+     *
+     * @throws ModbusTransportException
+     * @throws InterruptedException
+     */
     private void readServoWarns() throws ModbusTransportException, InterruptedException {
         List<String> warnStrings = new ArrayList<>();
 
@@ -301,13 +323,13 @@ public class ConnectionWebSocket {
                     warnCode = String.valueOf(tmp);
                     if (!"0".equals(warnCode)) {
                         // 转换错误码
-                        String msg = warnMessages.get(warnCode);
+                        String msg = ConnectionWebSocket.warnMessages.get(warnCode);
                         warnStrings.add(msg);
+                        log.error("[伺服电机]报警：【{}】【{}】", warnCode, msg);
                     }
                 }
             }
         }
-
 
         if (!warnStrings.isEmpty()) {
             SEND_MESSAGE_QUEUE.put(GsonUtils.toJson(WsConnectMessage.builder().type(WsConnectMessageEnum.warn).json(GsonUtils.toJson(warnStrings)).build()));
@@ -327,6 +349,7 @@ public class ConnectionWebSocket {
 
     @OnClose
     public void onClosing() {
+        log.info("[ws]断开连接：{}，连接总量：{}", this.session.getId(), onlineCount.addAndGet(-1));
 
         // 关闭伺服获取数据参数定时线程
         if (this.scheduledReadServoFuture != null) {
@@ -343,14 +366,10 @@ public class ConnectionWebSocket {
             this.modbusWorker.close();
         }
 
-//        if (this.scheduleSendTestFuture != null) {
-//            this.scheduleSendTestFuture.cancel(false);
-//        }
         if (this.masterHelper != null) {
             this.masterHelper.close();
         }
 
-        log.info("[ws]断开连接：{}，连接总量：{}", this.session.getId(), onlineCount.addAndGet(-1));
         try {
             this.session.close();
         } catch (IOException e) {
