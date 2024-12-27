@@ -85,7 +85,6 @@ public class ModbusUtil {
 
             WriteRegisterResponse response = (WriteRegisterResponse) this.master.send(request);
 
-
             if (response.isException()) {
                 log.error("[modbus][{}]写保持寄存器错误，错误信息是: {}", this.serialPortConfig.getCommPortId(), response.getExceptionMessage());
             } else {

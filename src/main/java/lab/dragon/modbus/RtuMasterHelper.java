@@ -1,7 +1,6 @@
 package lab.dragon.modbus;
 
 import com.fazecast.jSerialComm.SerialPort;
-import io.netty.buffer.ByteBufUtil;
 import lab.dragon.api.ConnectionWebSocket;
 import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.common.util.ByteUtils;
@@ -27,8 +26,9 @@ import java.util.Map;
 public class RtuMasterHelper {
     private static final Logger log = LoggerFactory.getLogger(RtuMasterHelper.class);
     private final SerialPort serialPort;
+    // 用来存放 ID 变量
     private final byte[] idTemp = new byte[2];
-
+    // 调转速线程
     private WriteSpdThread writeSpdThread = null;
 
     private RtuMasterHelper(String port) {
@@ -58,7 +58,7 @@ public class RtuMasterHelper {
 
         /*
          0  0xAA    帧头              AA
-         1  0x13    长度              13
+         1  0x15    长度              15
          2  0x     校验和              00
          3  0x00    error             00
          4  0x00    id-1              00
@@ -144,16 +144,12 @@ public class RtuMasterHelper {
                 // 处理接收到的数据
                 String tmp = String.format("[主控板]接收到数据[%s]: %s", len, ByteUtils.toHexPrettyString(buf2));
                 log.info(tmp);
-                switch (buf2[0]) {
-                    case (byte) 0xAA:
-                        decodeMsgAA(buf2);
-                        break;
-                    case (byte) 0xA5:
-                        decodeMsgA5(buf2);
-                        break;
+                if (buf2[0] == (byte) 0xAA) {
+                    decodeMsgAA(buf2);
+                } else if (buf2[0] == (byte) 0xA5) {
+                    decodeMsgA5(buf2);
                 }
 
-                Thread.sleep(100);
             } catch (Exception e) {
                 log.error("[主控板] 读取数据错误，错误消息： {}", e.getMessage(), e);
                 break;
