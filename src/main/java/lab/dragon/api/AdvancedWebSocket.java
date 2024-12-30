@@ -1,6 +1,5 @@
 package lab.dragon.api;
 
-import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortInvalidPortException;
 import lab.dragon.common.util.ThreadPoolUtil;
 import lab.dragon.config.ConstantConfiguration;
@@ -11,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import javax.xml.bind.DatatypeConverter;
@@ -42,18 +40,9 @@ public class AdvancedWebSocket {
     private final ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
     private ScheduledFuture<?> scheduleSendTestFuture;
 
-    /**
-     * spring 注入完成后调用的，相当于构造函数
-     */
-    @PostConstruct
-    public void onComponent() {
-
-    }
-
     private void loadModbusConfig() {
         String commId = ConstantConfiguration.commIds[2];
         try {
-            SerialPort.getCommPort(commId);
             this.masterHelper = RtuMasterHelper.createMaster(commId);
             ThreadPoolUtil.execute(this.masterHelper::listen);
         } catch (SerialPortInvalidPortException e) {
@@ -90,7 +79,7 @@ public class AdvancedWebSocket {
     /**
      * 接收信息
      *
-     * @param msg 接收到的消息，json格式，由 type 和 json 字符串两部分组成，例如："{"type": "command", "json": "{}"}"
+     * @param msg 接收到的消息
      */
     @OnMessage
     public void onMessage(String msg, Session session) {

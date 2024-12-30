@@ -20,7 +20,6 @@ public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        System.out.println("Hello world!");
         ConfigurableApplicationContext run = SpringApplication.run(Main.class, args);
         SpringContextUtils.setApplicationContext(run);
 
@@ -46,8 +45,8 @@ public class Main {
                 ConstantConfiguration.commIds[1] = "COM3";
                 ConstantConfiguration.commIds[2] = "COM7";
             } else {
-                log.info("读取串口配置文件");
                 String commString = new String(bytes);
+                log.info("读取串口配置文件: {}", commString);
                 String[] split = commString.split(";");
                 ConstantConfiguration.commIds[0] = split[0];
                 ConstantConfiguration.commIds[1] = split[1];

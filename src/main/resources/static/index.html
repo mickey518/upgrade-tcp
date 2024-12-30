@@ -176,6 +176,7 @@
       var ws;
       var fileChunks = [];
       var file;
+      var logLines = 0;
 
       // 点击“连接”按钮后创建 WebSocket 连接
       document
@@ -225,6 +226,12 @@
       // 显示日志信息
       function logMessage(message) {
         var log = document.getElementById("log");
+        // 判断日志行数是不是太多了
+        // if (logLines > 300 && scroll.checked) {
+        //  log.innerHTML = "";
+        //  logLines = 0;
+        // }
+
         var date = new Date();
 
         var hourStr = date.getHours() >= 10 ? date.getHours() : "0" + date.getHours();
@@ -233,12 +240,20 @@
 
         var dateStr = hourStr + ":" + minuStr + ":" + secoStr;
         log.innerHTML += dateStr + " " + message + "<br>";
+        logLines++;
 
         var scroll = document.getElementById("autoScroll");
         if (scroll.checked) {
           log.scrollTop = log.scrollHeight; // 滚动到最新消息
         }
       }
+
+      document.getElementById("logClear")
+      .addEventListener("click", function() {
+       var log = document.getElementById("log");
+       log.innerHTML = "";
+          logLines = 0;
+       });
 
       // 上传远程升级文件
       document
@@ -411,9 +426,9 @@
       <button id="pwm_test">PWM</button>
     </div>
 
-    <div>
-      <label>自动滚动</label>
-      <input id="autoScroll" type="checkbox" checked />
+    <div class="file-upload-container">
+      <button id="logClear">清空日志</button>
+      <label for="autoScroll">自动滚动</label><input id="autoScroll" type="checkbox" checked />
     </div>
     <div id="log"></div>
   </div>

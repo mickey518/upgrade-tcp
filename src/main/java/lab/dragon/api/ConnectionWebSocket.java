@@ -1,6 +1,5 @@
 package lab.dragon.api;
 
-import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortInvalidPortException;
 import com.google.gson.JsonSyntaxException;
 import com.serotonin.modbus4j.exception.ModbusInitException;
@@ -260,6 +259,7 @@ public class ConnectionWebSocket {
                 adjustment = true;
                 // 先将速度设置为 0
                 this.masterHelper.writeZeroSpd();
+                this.masterHelper.writeSpd(0);
                 // 下发校准指令
                 this.masterHelper.writeMode(3);
 
