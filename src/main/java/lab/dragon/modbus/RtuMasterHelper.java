@@ -206,9 +206,9 @@ public class RtuMasterHelper {
             isContinued.set(false);
             log.error("校验错误");
         }
-        if (buffer[1] != (byte) 0x09 && buffer[1] != (byte) 0x29) {
-            return;
-        }
+//        if (buffer[1] != (byte) 0x09 && buffer[1] != (byte) 0x29) {
+//            return;
+//        }
         byte[] tmpBuffer;
         String folder = "parameters";
         String fileNamePrefix;
@@ -217,8 +217,8 @@ public class RtuMasterHelper {
                 // 返回的数据是驱动板参数,驱动板参数这里本来是32个字节，现在要增加2个字节的 FFFF
                 tmpBuffer = new byte[buffer.length - 7]; //  + 2
                 System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
-                tmpBuffer[tmpBuffer.length - 2] = (byte) 0xFF;
-                tmpBuffer[tmpBuffer.length - 1] = (byte) 0xFF;
+//                tmpBuffer[tmpBuffer.length - 2] = (byte) 0xFF;
+//                tmpBuffer[tmpBuffer.length - 1] = (byte) 0xFF;
                 fileNamePrefix = "驱动板参数-";
                 break;
             } case (byte) 0x09: {
@@ -227,7 +227,8 @@ public class RtuMasterHelper {
                 fileNamePrefix = "主控板参数-";
                 break;
             } default:
-                tmpBuffer = new byte[0];
+                tmpBuffer = new byte[buffer.length - 7];
+                System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
                 fileNamePrefix = "参数-";
                 break;
         }
