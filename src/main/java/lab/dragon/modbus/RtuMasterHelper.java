@@ -121,7 +121,7 @@ public class RtuMasterHelper {
                 // 截取有效数据
                 byte[] read = new byte[bytesRead];
                 System.arraycopy(tmpBytes, 0, read, 0, bytesRead);
-                log.info("串口缓冲数据: {}", ByteUtils.toHexPrettyString(read));
+//                log.info("串口缓冲数据: {}", ByteUtils.toHexPrettyString(read));
 
                 // 写入缓冲区
                 if (byteBuffer.remaining() < bytesRead) {
