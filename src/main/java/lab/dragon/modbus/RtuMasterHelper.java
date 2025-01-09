@@ -178,7 +178,6 @@ public class RtuMasterHelper {
 
             } catch (Exception e) {
                 log.error("[主控板] 读取数据错误，错误消息： {}", e.getMessage(), e);
-                break;
             }
         }
     }
@@ -206,9 +205,9 @@ public class RtuMasterHelper {
             isContinued.set(false);
             log.error("校验错误");
         }
-//        if (buffer[1] != (byte) 0x09 && buffer[1] != (byte) 0x29) {
-//            return;
-//        }
+        if (buffer[1] < (byte) 0x09) {
+            return;
+        }
         byte[] tmpBuffer;
         String folder = "parameters";
         String fileNamePrefix;
@@ -221,12 +220,14 @@ public class RtuMasterHelper {
 //                tmpBuffer[tmpBuffer.length - 1] = (byte) 0xFF;
                 fileNamePrefix = "驱动板参数-";
                 break;
-            } case (byte) 0x09: {
+            }
+            case (byte) 0x09: {
                 tmpBuffer = new byte[buffer.length - 7];
                 System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
                 fileNamePrefix = "主控板参数-";
                 break;
-            } default:
+            }
+            default:
                 tmpBuffer = new byte[buffer.length - 7];
                 System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
                 fileNamePrefix = "参数-";
@@ -289,8 +290,23 @@ public class RtuMasterHelper {
         int readCount = 0;
         int readSize = 0;
 
+        int chunks = calculateChunksLength(buffer);
 
-        for (int i = 0; i < calculateChunksLength(buffer); i++) {
+        for (int i = 0; i < chunks; i++) {
+
+            String msg = "";
+            if (mode == (byte) 0x06) {
+                msg = "UPGRADE_DRIVE_PERCENTAGE";
+            } else if (mode == (byte) 0x0A) {
+                msg = "SEND_DRIVE_PARAMETER_PERCENTAGE";
+            } else if (mode == (byte) 0x0D) {
+                msg = "UPGRADE_MAIN_PERCENTAGE";
+            } else if (mode == (byte) 0x11) {
+                msg = "SEND_MAIN_PARAMETER_PERCENTAGE";
+            }
+            msg = msg + ";;" + (i * 100 / chunks) + "%";
+            AdvancedWebSocket.SEND_MESSAGE_QUEUE.add(msg);
+
             int address = i * chunkSize;
             byte[] bytes1 = ByteUtils.short2BytesLittleEndian(address);
             while (true) {
@@ -533,7 +549,10 @@ public class RtuMasterHelper {
         System.arraycopy(buffer, 0, bytes, 0, bytes.length);
         bytes[2] = 0;
         long summed = ByteUtils.sum(bytes);
-        return buffer[2] == (byte) ((byte) 0xFF & summed);
+        boolean b = buffer[2] == (byte) ((byte) 0xFF & summed);
+        if (!b)
+            AdvancedWebSocket.SEND_MESSAGE_QUEUE.add(String.format("校验和应为：%s，实际是：%s", ByteUtils.toHexPrettyString(new byte[]{(byte) ((byte) 0xFF & summed)}), ByteUtils.toHexPrettyString(new byte[]{buffer[2]})));
+        return b;
     }
 
     /**

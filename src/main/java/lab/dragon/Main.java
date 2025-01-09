@@ -2,6 +2,7 @@ package lab.dragon;
 
 import lab.dragon.config.ConstantConfiguration;
 import lab.dragon.config.SensorPropertyConfig;
+import lab.dragon.modbus.ModbusUtil;
 import lab.dragon.util.SpringContextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 @SpringBootApplication
 public class Main {
@@ -24,6 +26,9 @@ public class Main {
         SpringContextUtils.setApplicationContext(run);
 
         SensorPropertyConfig.config();
+
+        List<String> commPortIds = ModbusUtil.getCommPortIds();
+        log.info("识别到的端口列表为：{}", commPortIds);
 
         configCommPort();
     }
