@@ -213,11 +213,8 @@ public class RtuMasterHelper {
         String fileNamePrefix;
         switch (buffer[1]) {
             case (byte) 0x29: {
-                // 返回的数据是驱动板参数,驱动板参数这里本来是32个字节，现在要增加2个字节的 FFFF
                 tmpBuffer = new byte[buffer.length - 7]; //  + 2
                 System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
-//                tmpBuffer[tmpBuffer.length - 2] = (byte) 0xFF;
-//                tmpBuffer[tmpBuffer.length - 1] = (byte) 0xFF;
                 fileNamePrefix = "驱动板参数-";
                 break;
             }
@@ -230,7 +227,7 @@ public class RtuMasterHelper {
             default:
                 tmpBuffer = new byte[buffer.length - 7];
                 System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
-                fileNamePrefix = "参数-";
+                fileNamePrefix = "tmp-";
                 break;
         }
         try {
@@ -515,7 +512,7 @@ public class RtuMasterHelper {
         /*
         帧头  0  ｜长度 1  ｜校验和 2｜模式3 |id 低 4 | id 高 5 |帧尾6
         --------------------------------------------------------------
-        0xA5    ｜0x05   ｜0x00   ｜0x00   ｜0x71   ｜0xC0   | 0x55
+        0xAA    ｜0x05   ｜0x00   ｜0x00   ｜0x71   ｜0xC0   | 0x55
          */
         byte[] bytes = new byte[7];
 
@@ -526,6 +523,22 @@ public class RtuMasterHelper {
         bytes[3] = (byte) mode;
         bytes[4] = idTemp[0];   //
         bytes[5] = idTemp[1];   //
+
+        writeCommand(bytes);
+    }
+
+    public void getVersion(int mode) throws IOException {
+        byte[] bytes = new byte[9];
+
+        bytes[0] = (byte) 0xAA;
+        bytes[bytes.length - 1] = (byte) 0x55;
+        bytes[1] = (byte) bytes.length;
+        bytes[2] = 0;
+        bytes[3] = (byte) mode;
+        bytes[4] = idTemp[0];   //
+        bytes[5] = idTemp[1];   //
+        bytes[6] = 0;
+        bytes[7] = 0;
 
         writeCommand(bytes);
     }

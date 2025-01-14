@@ -166,12 +166,16 @@ public class AdvancedWebSocket {
 
                     SEND_MESSAGE_QUEUE.add("SEND_MAIN_PARAMETER_COMPLETE;;" + mainFileUploading);
 
+                } else if (StringUtils.equalsIgnoreCase(split[0], "READ_PARAMETER")) {
+                    this.masterHelper.writeMode(DatatypeConverter.parseHexBinary(split[1])[0]);
+                } else if (StringUtils.equalsIgnoreCase(split[0], "SPD")) {
+                    log.info("this master write zero spd");
+                    this.masterHelper.writeZeroSpd();
                 }
-            } else if (StringUtils.startsWith(msg, "READ_PARAMETER")) {
-                String type = StringUtils.substring(msg, 15);
-                this.masterHelper.writeMode(DatatypeConverter.parseHexBinary(type)[0]);
-            } else if (StringUtils.startsWith(msg, "SPD;0")) {
-                this.masterHelper.writeZeroSpd();
+            } else if (StringUtils.equals(msg, "VERSION_DRIVE")) {
+                this.masterHelper.getVersion(0x13);
+            } else if (StringUtils.equals(msg, "VERSION_MAIN")) {
+                this.masterHelper.getVersion(0x14);
             } else {
                 byte[] parseHexBinary = ByteUtils.parseHexBinary(msg.replaceAll(" ", ""));
                 parseHexBinary[2] = 0;
