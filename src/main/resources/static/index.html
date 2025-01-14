@@ -475,14 +475,14 @@
       // 显示日志信息
       function logMessage(message) {
         // 判断日志行数是不是太多了
-        if (logLines >= 100) {
+        if (logLines >= 100 && !scrollCheckBoxElement.checked) {
           var lines = logMessageElement.innerHTML.split("<br>");
           // 删除第一行
           lines.shift();
           // 重新设置内容
           logMessageElement.innerHTML = lines.join("<br>");
 
-          logLines = 299;
+          logLines = 99;
         }
         date = new Date();
         var hourStr = date.getHours() >= 10 ? date.getHours() : "0" + date.getHours();
