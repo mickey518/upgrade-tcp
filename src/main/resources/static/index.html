@@ -549,7 +549,7 @@
         if (!driveFile) {
           logMessage("未选择驱动板升级文件");
           driveUpgradeStatusSpanElement.innerText = "未选择升级文件";
-          selectDriveFileElement.classList.add("inputBorderRed");
+          selectDriveFileElement.parentNode.classList.add("inputBorderRed");
           return;
         }
 
@@ -573,7 +573,7 @@
         if (!driveFile) {
           logMessage("未选择驱动板参数文件");
           driveUpgradeStatusSpanElement.innerText = "未选择参数文件";
-          selectDriveFileElement.classList.add("inputBorderRed");
+          selectDriveFileElement.parentNode.classList.add("inputBorderRed");
           return;
         }
 
@@ -629,7 +629,7 @@
           if (!mainFile) {
             logMessage("未选择主控板升级文件");
             mainUpgradeStatusSpanElement.innerText = "未选择升级文件";
-            selectMainFileElement.classList.add("inputBorderRed");
+            selectMainFileElement.parentNode.classList.add("inputBorderRed");
             return;
           }
 
@@ -651,12 +651,12 @@
         if (!mainFile) {
           logMessage("未选择主控板升级文件");
           mainUpgradeStatusSpanElement.innerText = "未选择升级文件";
-          selectMainFileElement.classList.add("inputBorderRed");
+          selectMainFileElement.parentNode.classList.add("inputBorderRed");
           return;
         }
 
         // 下发命令0C，开始下发主控板参数
-        ws.send("UPGRADE_MAIN;0F");
+        ws.send("SEND_MAIN_PARAMETER;0F");
       });
 
       // 校准
@@ -675,6 +675,10 @@
 
       document.getElementById("logClear").addEventListener("click", () => cleanLog());
 
+      document.getElementById("readVersionButton").addEventListener("click", () => ws.send("VERSION_DRIVE"));
+
+      document.getElementById("readMainVersionButton").addEventListener("click", () => ws.send("VERSION_MAIN"));
+
     });
   </script>
 </head>
@@ -690,15 +694,16 @@
 
     <div class="div-container">
       <div class="select-file-container inputBorderGray">
-        <span class="left-label" style="flex: 0.1;">驱动板：</span><input type="file" id="select-drive-file"
-          style="flex: 0.9;" />
+        <span class="left-label" style="flex: 0.1;">驱动板：</span>
+        <input type="file" id="select-drive-file" style="flex: 0.9;" />
       </div>
-      <span id="driveUpgradeStatusSpan" style="flex: 0.25;"></span>
+      <span id="driveUpgradeStatusSpan" style="flex: 0.5;"></span>
     </div>
     <div class="div-container">
       <button id="upgradeButton" style="flex: 0.25;">升级驱动板</button>
       <button id="readParameterButton" style="flex: 0.25;">读取驱动板参数</button>
       <button id="sendParameterButton" style="flex: 0.25;">下发驱动板参数</button>
+      <button id="readVersionButton" style="flex: 0.25;">获取版本号</button>
     </div>
 
     <div class="div-container">
@@ -711,6 +716,7 @@
       <button id="upgradeMainButton" style="flex: 0.25;">升级主控板</button>
       <button id="readMainParameterButton" style="flex: 0.25;">读取主控板参数</button>
       <button id="sendMainParameterButton" style="flex: 0.25;">下发主控板参数</button>
+      <button id="readMainVersionButton" style="flex: 0.25;">获取版本号</button>
     </div>
 
     <div class="div-container">
