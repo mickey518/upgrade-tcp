@@ -16,6 +16,7 @@ import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -212,6 +213,13 @@ public class RtuMasterHelper {
         String folder = "parameters";
         String fileNamePrefix;
         switch (buffer[1]) {
+            case (byte) 0x1A: {
+                tmpBuffer = new byte[buffer.length - 7]; //  + 2
+                System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);
+                String version = new String(tmpBuffer, StandardCharsets.US_ASCII);
+                AdvancedWebSocket.SEND_MESSAGE_QUEUE.add("VERSION;;" + version);
+                return;
+            }
             case (byte) 0x29: {
                 tmpBuffer = new byte[buffer.length - 7]; //  + 2
                 System.arraycopy(buffer, 6, tmpBuffer, 0, tmpBuffer.length);

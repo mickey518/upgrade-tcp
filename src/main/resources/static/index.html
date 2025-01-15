@@ -258,6 +258,8 @@
 
       let selectFileContainerElement = document.getElementsByClassName("select-file-container");
 
+      var clicked = "";
+
 
       async function createWebSocketAsync() {
         return new Promise((resolve, reject) => {
@@ -439,6 +441,12 @@
                 case "SEND_MAIN_PARAMETER_PERCENTAGE":
                   mainUpgradeStatusSpanElement.innerText = "下发参数 " + strArr[1];
                   break;
+                case "VERSION":
+                  if (clicked === "readVersionButton") {
+                    driveUpgradeStatusSpanElement.innerText = strArr[1];
+                  } else if (clicked === "readMainVersionButton") {
+                    mainUpgradeStatusSpanElement.innerText = strArr[1];
+                  }
               }
             } else {
               logMessage(event.data);
@@ -675,9 +683,15 @@
 
       document.getElementById("logClear").addEventListener("click", () => cleanLog());
 
-      document.getElementById("readVersionButton").addEventListener("click", () => ws.send("VERSION_DRIVE"));
+      document.getElementById("readVersionButton").addEventListener("click", () => {
+        clicked = "readVersionButton";
+        ws.send("VERSION_DRIVE");
+      });
 
-      document.getElementById("readMainVersionButton").addEventListener("click", () => ws.send("VERSION_MAIN"));
+      document.getElementById("readMainVersionButton").addEventListener("click", () => {
+        clicked = "readMainVersionButton";
+        ws.send("VERSION_MAIN");
+      });
 
     });
   </script>
@@ -710,7 +724,7 @@
       <div class="select-file-container inputBorderGray">
         <span class="left-label">主控板：</span><input type="file" id="select-main-file" />
       </div>
-      <span id="mainUpgradeStatusSpan" style="flex: 0.25;"></span>
+      <span id="mainUpgradeStatusSpan" style="flex: 0.5;"></span>
     </div>
     <div class="div-container">
       <button id="upgradeMainButton" style="flex: 0.25;">升级主控板</button>
