@@ -37,13 +37,6 @@
       text-align: center;
     }
 
-    /* Flexbox 布局：将按钮和输入框放在一行 */
-    .file-upload-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
     /* 外部容器 */
     .div-container {
       width: 70%;
@@ -142,44 +135,12 @@
       font-size: 16px;
       cursor: pointer;
       transition: background-color 0.3s ease;
-      margin: 10px 30px 5px 0;
+      margin: 5px 30px 5px 0;
     }
 
     button:hover {
       background-color: #847e7e;
       /* 按钮悬停效果 */
-    }
-
-    .activatedConnectButton {
-      background-color: #1f801b;
-      border: 1px solid #196816;
-      border-radius: 15px;
-      font-size: 24px;
-    }
-
-    .activatedConnectButton:hover {
-      background-color: #20d31a;
-    }
-
-    .activatedDisconnectButton {
-      background-color: #732312;
-      border: 1px solid #7b3535;
-      border-radius: 15px;
-      font-size: 24px;
-    }
-
-    .activatedDisconnectButton:hover {
-      background-color: #d33a1b;
-    }
-
-    .disabledButton {
-      background-color: #222;
-      border: none;
-      cursor: not-allowed;
-    }
-
-    .disabledButton:hover {
-      background-color: #222;
     }
 
     #messageInput {
@@ -230,55 +191,38 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      var ws;
-      var wsConnected = false;
-      var driveFile;
-      var mainFile;
-      var logLines = 0;
-      var chunkSize = 1024 * 8;  // 每块 8 KB
+      let ws;
+      let wsConnected = false;
+      let driveFile;
+      let mainFile;
+      let logLines = 0;
+      const chunkSize = 1024 * 8;  // 每块 8 KB
 
-      let connectButtonElement = document.getElementById("connectButton");
-      let disconnectButtonElement = document.getElementById("disconnectButton");
+      let selectDriveFileElement = document.getElementById("select-drive-file");
       let upgradeButtonElement = document.getElementById("upgradeButton");
+      let driveUpgradeStatusSpanElement = document.getElementById("driveUpgradeStatusSpan");
+
+      let selectMainFileElement = document.getElementById("select-main-file");
+      let upgradeMainButtonElement = document.getElementById("upgradeMainButton");
+      let mainUpgradeStatusSpanElement = document.getElementById("mainUpgradeStatusSpan");
+
       let logMessageElement = document.getElementById("log");
       let scrollCheckBoxElement = document.getElementById("autoScroll");
-      let selectDriveFileElement = document.getElementById("select-drive-file");
-      let driveUpgradeStatusSpanElement = document.getElementById("driveUpgradeStatusSpan");
-      let selectMainFileElement = document.getElementById("select-main-file");
-      let mainUpgradeStatusSpanElement = document.getElementById("mainUpgradeStatusSpan");
-      let upgradeMainButtonElement = document.getElementById("upgradeMainButton");
-      let readParameterButtonElement = document.getElementById("readParameterButton");
-      let sendParameterButtonElement = document.getElementById("sendParameterButton");
-      let readMainParameterButtonElement = document.getElementById("readMainParameterButton");
-      let sendMainParameterButtonElement = document.getElementById("sendMainParameterButton");
-
-      let adjustmentButtonElement = document.getElementById("adjustment");
-      let adjustmentStopButtonElement = document.getElementById("adjustmentStop");
-      let pwmTestButtonElement = document.getElementById("pwm_test");
-
-      let selectFileContainerElement = document.getElementsByClassName("select-file-container");
-
-      var clicked = "";
-
+      let clicked = "";
 
       async function createWebSocketAsync() {
         return new Promise((resolve, reject) => {
-          var wsUrl = "ws://127.0.0.1:4000/advanced-ws";
+          const wsUrl = "ws://127.0.0.1:4000/ws-firmware-upgrade";
 
           ws = new WebSocket(wsUrl);
 
           ws.onopen = function () {
-            connectButtonElement.classList.add("disabledButton");
-            connectButtonElement.disabled = true;
             wsConnected = true;
             logMessage("连接已打开");
             resolve(wsConnected);
           };
 
           ws.onclose = function () {
-            connectButtonElement.classList.remove("disabledButton");
-            connectButtonElement.disabled = false;
-            disconnectButtonElement.classList.disabled = true;
             wsConnected = false;
             driveFile = null;
             selectDriveFileElement.value = null;
@@ -299,39 +243,17 @@
 
           ws.onmessage = function (event) {
             if (event.data.indexOf(";;") > -1) {
-              var strArr = event.data.split(";;")
+              const strArr = event.data.split(";;");
               switch (strArr[0]) {
                 case "UPGRADE_DRIVE_START":
                   upgradeButtonElement.classList.add("disabledButton");
                   upgradeButtonElement.disabled = true;
-                  readParameterButtonElement.classList.add("disabledButton");
-                  readParameterButtonElement.disable = true;
-                  sendParameterButtonElement.classList.add("disabledButton");
-                  sendParameterButtonElement.disabled = true;
                   driveUpgradeStatusSpanElement.innerText = "升级中";
-
-                  adjustmentButtonElement.classList.add("disabledButton");
-                  adjustmentButtonElement.disabled = true;
-                  adjustmentStopButtonElement.classList.add("disabledButton");
-                  adjustmentStopButtonElement.disabled = true;
-                  pwmTestButtonElement.classList.add("disabledButton");
-                  pwmTestButtonElement.disabled = true;
                   break;
                 case "UPGRADE_DRIVE_COMPLETE":
                   upgradeButtonElement.classList.remove("disabledButton");
                   upgradeButtonElement.disabled = false;
-                  readParameterButtonElement.classList.remove("disabledButton");
-                  readParameterButtonElement.disabled = false;
-                  sendParameterButtonElement.classList.remove("disabledButton");
-                  sendParameterButtonElement.disabled = false;
                   driveUpgradeStatusSpanElement.innerText = "升级完成";
-
-                  adjustmentButtonElement.classList.remove("disabledButton");
-                  adjustmentButtonElement.disabled = false;
-                  adjustmentStopButtonElement.classList.remove("disabledButton");
-                  adjustmentStopButtonElement.disabled = false;
-                  pwmTestButtonElement.classList.remove("disabledButton");
-                  pwmTestButtonElement.disabled = false;
                   break;
                 case "UPGRADE_DRIVE_PERCENTAGE":
                   driveUpgradeStatusSpanElement.innerText = "升级中 " + strArr[1];
@@ -339,34 +261,12 @@
                 case "SEND_DRIVE_PARAMETER_START":
                   upgradeButtonElement.classList.add("disabledButton");
                   upgradeButtonElement.disabled = true;
-                  readParameterButtonElement.classList.add("disabledButton");
-                  readParameterButtonElement.disable = true;
-                  sendParameterButtonElement.classList.add("disabledButton");
-                  sendParameterButtonElement.disabled = true;
                   driveUpgradeStatusSpanElement.innerText = "下发参数";
-
-                  adjustmentButtonElement.classList.add("disabledButton");
-                  adjustmentButtonElement.disabled = true;
-                  adjustmentStopButtonElement.classList.add("disabledButton");
-                  adjustmentStopButtonElement.disabled = true;
-                  pwmTestButtonElement.classList.add("disabledButton");
-                  pwmTestButtonElement.disabled = true;
                   break;
                 case "SEND_DRIVE_PARAMETER_COMPLETE":
                   upgradeButtonElement.classList.remove("disabledButton");
                   upgradeButtonElement.disabled = false;
-                  readParameterButtonElement.classList.remove("disabledButton");
-                  readParameterButtonElement.disabled = false;
-                  sendParameterButtonElement.classList.remove("disabledButton");
-                  sendParameterButtonElement.disabled = false;
                   driveUpgradeStatusSpanElement.innerText = "参数下发完成";
-
-                  adjustmentButtonElement.classList.remove("disabledButton");
-                  adjustmentButtonElement.disabled = false;
-                  adjustmentStopButtonElement.classList.remove("disabledButton");
-                  adjustmentStopButtonElement.disabled = false;
-                  pwmTestButtonElement.classList.remove("disabledButton");
-                  pwmTestButtonElement.disabled = false;
                   break;
                 case "SEND_DRIVE_PARAMETER_PERCENTAGE":
                   driveUpgradeStatusSpanElement.innerText = "下发参数 " + strArr[1];
@@ -374,34 +274,12 @@
                 case "UPGRADE_MAIN_START":
                   upgradeMainButtonElement.classList.add("disabledButton");
                   upgradeMainButtonElement.disabled = true;
-                  readMainParameterButtonElement.classList.add("disabledButton");
-                  readMainParameterButtonElement.disable = true;
-                  sendMainParameterButtonElement.classList.add("disabledButton");
-                  sendMainParameterButtonElement.disabled = true;
                   mainUpgradeStatusSpanElement.innerText = "升级中";
-
-                  adjustmentButtonElement.classList.add("disabledButton");
-                  adjustmentButtonElement.disabled = true;
-                  adjustmentStopButtonElement.classList.add("disabledButton");
-                  adjustmentStopButtonElement.disabled = true;
-                  pwmTestButtonElement.classList.add("disabledButton");
-                  pwmTestButtonElement.disabled = true;
                   break;
                 case "UPGRADE_MAIN_COMPLETE":
                   upgradeMainButtonElement.classList.remove("disabledButton");
                   upgradeMainButtonElement.disabled = false;
-                  readMainParameterButtonElement.classList.remove("disabledButton");
-                  readMainParameterButtonElement.disabled = false;
-                  sendMainParameterButtonElement.classList.remove("disabledButton");
-                  sendMainParameterButtonElement.disabled = false;
                   mainUpgradeStatusSpanElement.innerText = "升级完成";
-
-                  adjustmentButtonElement.classList.remove("disabledButton");
-                  adjustmentButtonElement.disabled = false;
-                  adjustmentStopButtonElement.classList.remove("disabledButton");
-                  adjustmentStopButtonElement.disabled = false;
-                  pwmTestButtonElement.classList.remove("disabledButton");
-                  pwmTestButtonElement.disabled = false;
                   break;
                 case "UPGRADE_MAIN_PERCENTAGE":
                   mainUpgradeStatusSpanElement.innerText = "升级中 " + strArr[1];
@@ -409,44 +287,16 @@
                 case "SEND_MAIN_PARAMETER_START":
                   upgradeMainButtonElement.classList.add("disabledButton");
                   upgradeMainButtonElement.disabled = true;
-                  readMainParameterButtonElement.classList.add("disabledButton");
-                  readMainParameterButtonElement.disable = true;
-                  sendMainParameterButtonElement.classList.add("disabledButton");
-                  sendMainParameterButtonElement.disabled = true;
                   mainUpgradeStatusSpanElement.innerText = "下发参数";
-
-                  adjustmentButtonElement.classList.add("disabledButton");
-                  adjustmentButtonElement.disabled = true;
-                  adjustmentStopButtonElement.classList.add("disabledButton");
-                  adjustmentStopButtonElement.disabled = true;
-                  pwmTestButtonElement.classList.add("disabledButton");
-                  pwmTestButtonElement.disabled = true;
                   break;
                 case "SEND_MAIN_PARAMETER_COMPLETE":
                   upgradeMainButtonElement.classList.remove("disabledButton");
                   upgradeMainButtonElement.disabled = false;
-                  readMainParameterButtonElement.classList.remove("disabledButton");
-                  readMainParameterButtonElement.disabled = false;
-                  sendMainParameterButtonElement.classList.remove("disabledButton");
-                  sendMainParameterButtonElement.disabled = false;
                   mainUpgradeStatusSpanElement.innerText = "参数下发完成";
-
-                  adjustmentButtonElement.classList.remove("disabledButton");
-                  adjustmentButtonElement.disabled = false;
-                  adjustmentStopButtonElement.classList.remove("disabledButton");
-                  adjustmentStopButtonElement.disabled = false;
-                  pwmTestButtonElement.classList.remove("disabledButton");
-                  pwmTestButtonElement.disabled = false;
                   break;
                 case "SEND_MAIN_PARAMETER_PERCENTAGE":
                   mainUpgradeStatusSpanElement.innerText = "下发参数 " + strArr[1];
                   break;
-                case "VERSION":
-                  if (clicked === "readVersionButton") {
-                    driveUpgradeStatusSpanElement.innerText = strArr[1];
-                  } else if (clicked === "readMainVersionButton") {
-                    mainUpgradeStatusSpanElement.innerText = strArr[1];
-                  }
               }
             } else {
               logMessage(event.data);
@@ -456,20 +306,13 @@
         });
       }
 
-      // 点击“连接”按钮后创建 WebSocket 连接
-      connectButtonElement.addEventListener("click", () => createWebSocketAsync());
-
-      // 断开
-      disconnectButtonElement
-        .addEventListener("click", function () {
-          ws.close();
-        });
+      createWebSocketAsync();
 
       // 发送消息
       document
         .getElementById("sendButton")
         .addEventListener("click", function () {
-          var message = document.getElementById("messageInput").value;
+          const message = document.getElementById("messageInput").value;
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(message);
             logMessage("发送命令>>>: " + message);
@@ -478,13 +321,13 @@
           }
         });
 
-      var date = new Date();
+      let date = new Date();
 
       // 显示日志信息
       function logMessage(message) {
         // 判断日志行数是不是太多了
         if (logLines >= 100 && !scrollCheckBoxElement.checked) {
-          var lines = logMessageElement.innerHTML.split("<br>");
+          const lines = logMessageElement.innerHTML.split("<br>");
           // 删除第一行
           lines.shift();
           // 重新设置内容
@@ -493,11 +336,11 @@
           logLines = 99;
         }
         date = new Date();
-        var hourStr = date.getHours() >= 10 ? date.getHours() : "0" + date.getHours();
-        var minuStr = date.getMinutes() >= 10 ? date.getMinutes() : "0" + date.getMinutes();
-        var secoStr = date.getSeconds() >= 10 ? date.getSeconds() : "0" + date.getSeconds();
+        const hourStr = date.getHours() >= 10 ? date.getHours() : "0" + date.getHours();
+        const minuStr = date.getMinutes() >= 10 ? date.getMinutes() : "0" + date.getMinutes();
+        const secoStr = date.getSeconds() >= 10 ? date.getSeconds() : "0" + date.getSeconds();
 
-        var dateStr = hourStr + ":" + minuStr + ":" + secoStr;
+        const dateStr = hourStr + ":" + minuStr + ":" + secoStr;
         logMessageElement.innerHTML += dateStr + " " + message + "<br>";
         logLines++;
 
@@ -512,7 +355,7 @@
       }
 
       async function uploadDriveFileAsync(selectFile) {
-        var a;
+        let a;
         if (!wsConnected) {
           a = await createWebSocketAsync();
         }
@@ -523,12 +366,12 @@
           ws.send("UPLOAD_DRIVE_START;");
           driveUpgradeStatusSpanElement.innerText = "文件上传中";
           // 将文件分成小块
-          var totalChunks = Math.ceil(driveFile.size / chunkSize);
+          const totalChunks = Math.ceil(driveFile.size / chunkSize);
 
-          for (var i = 0; i < totalChunks; i++) {
-            var start = i * chunkSize;
-            var end = Math.min(start + chunkSize, driveFile.size);
-            var chunk = driveFile.slice(start, end);
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, driveFile.size);
+            const chunk = driveFile.slice(start, end);
             ws.send(chunk);
           }
 
@@ -565,33 +408,9 @@
         ws.send("UPGRADE_DRIVE;05");
       });
 
-      // 读取驱动板参数
-      document
-        .getElementById("readParameterButton")
-        .addEventListener("click", function () {
-          ws.send('READ_PARAMETER;09');
-        });
-
-      // 下发驱动板参数文件
-      sendParameterButtonElement.addEventListener("click", function () {
-        if (!wsConnected) {
-          logMessage("连接未打开！！！");
-          return;
-        }
-        if (!driveFile) {
-          logMessage("未选择驱动板参数文件");
-          driveUpgradeStatusSpanElement.innerText = "未选择参数文件";
-          selectDriveFileElement.parentNode.classList.add("inputBorderRed");
-          return;
-        }
-
-        // 下发命令08，开始下发驱动板参数
-        ws.send("SEND_DRIVE_PARAMETER;08");
-      });
-
 
       async function uploadMainFileAsync(selectFile) {
-        var a;
+        let a;
         if (!wsConnected) {
           a = await createWebSocketAsync();
         }
@@ -602,12 +421,12 @@
           ws.send("UPLOAD_MAIN_START;");
           mainUpgradeStatusSpanElement.innerText = "文件上传中";
           // 将文件分成小块
-          var totalChunks = Math.ceil(mainFile.size / chunkSize);
+          const totalChunks = Math.ceil(mainFile.size / chunkSize);
 
-          for (var i = 0; i < totalChunks; i++) {
-            var start = i * chunkSize;
-            var end = Math.min(start + chunkSize, mainFile.size);
-            var chunk = mainFile.slice(start, end);
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, mainFile.size);
+            const chunk = mainFile.slice(start, end);
             ws.send(chunk);
           }
 
@@ -645,53 +464,7 @@
           ws.send("UPGRADE_MAIN;0C");
         });
 
-      // 读取主控板参数
-      readMainParameterButtonElement.addEventListener("click", function () {
-        ws.send('READ_PARAMETER;10');
-      });
-
-      // 下发主控板参数
-      sendMainParameterButtonElement.addEventListener("click", function () {
-        if (!wsConnected) {
-          logMessage("连接未打开！！！");
-          return;
-        }
-        if (!mainFile) {
-          logMessage("未选择主控板升级文件");
-          mainUpgradeStatusSpanElement.innerText = "未选择升级文件";
-          selectMainFileElement.parentNode.classList.add("inputBorderRed");
-          return;
-        }
-
-        // 下发命令0C，开始下发主控板参数
-        ws.send("SEND_MAIN_PARAMETER;0F");
-      });
-
-      // 校准
-      adjustmentButtonElement.addEventListener("click", function () {
-        ws.send('READ_PARAMETER;03');
-      });
-
-      // 校准结束
-      adjustmentStopButtonElement.addEventListener("click", function () {
-        ws.send('SPD;0');
-      });
-
-      pwmTestButtonElement.addEventListener("click", function () {
-        ws.send('READ_PARAMETER;02');
-      });
-
       document.getElementById("logClear").addEventListener("click", () => cleanLog());
-
-      document.getElementById("readVersionButton").addEventListener("click", () => {
-        clicked = "readVersionButton";
-        ws.send("VERSION_DRIVE");
-      });
-
-      document.getElementById("readMainVersionButton").addEventListener("click", () => {
-        clicked = "readMainVersionButton";
-        ws.send("VERSION_MAIN");
-      });
 
     });
   </script>
@@ -699,49 +472,29 @@
 
 <body>
   <div class="container">
-    <h1>主控板-高级管理</h1>
-
-    <div class="file-upload-container">
-      <button id="connectButton" class="activatedConnectButton" style="flex: 0.25;">连接</button>
-      <button id="disconnectButton" class="activatedDisconnectButton" style="flex: 0.25;">断开</button>
-    </div>
+    <h1>固件升级 -- 网络版</h1>
 
     <div class="div-container">
-      <div class="select-file-container inputBorderGray">
+      <div class="select-file-container inputBorderGray" style="flex: 0.6;">
         <span class="left-label" style="flex: 0.1;">驱动板：</span>
-        <input type="file" id="select-drive-file" style="flex: 0.9;" />
+        <input type="file" id="select-drive-file" />
       </div>
-      <span id="driveUpgradeStatusSpan" style="flex: 0.5;"></span>
-    </div>
-    <div class="div-container">
-      <button id="upgradeButton" style="flex: 0.25;">升级驱动板</button>
-      <button id="readParameterButton" style="flex: 0.25;">读取驱动板参数</button>
-      <button id="sendParameterButton" style="flex: 0.25;">下发驱动板参数</button>
-      <button id="readVersionButton" style="flex: 0.25;">获取版本号</button>
+      <button id="upgradeButton" style="flex: 0.2;">升级驱动板</button>
+      <span id="driveUpgradeStatusSpan" style="flex: 0.2;"></span>
     </div>
 
     <div class="div-container">
-      <div class="select-file-container inputBorderGray">
-        <span class="left-label">主控板：</span><input type="file" id="select-main-file" />
+      <div class="select-file-container inputBorderGray" style="flex: 0.6;">
+        <span class="left-label" style="flex: 0.1;">主控板：</span>
+        <input type="file" id="select-main-file" />
       </div>
-      <span id="mainUpgradeStatusSpan" style="flex: 0.5;"></span>
-    </div>
-    <div class="div-container">
-      <button id="upgradeMainButton" style="flex: 0.25;">升级主控板</button>
-      <button id="readMainParameterButton" style="flex: 0.25;">读取主控板参数</button>
-      <button id="sendMainParameterButton" style="flex: 0.25;">下发主控板参数</button>
-      <button id="readMainVersionButton" style="flex: 0.25;">获取版本号</button>
+      <button id="upgradeMainButton" style="flex: 0.2;">升级主控板</button>
+      <span id="mainUpgradeStatusSpan" style="flex: 0.2;"></span>
     </div>
 
     <div class="div-container">
       <input type="text" id="messageInput" style="flex: 0.5;" placeholder="输入命令" />
       <button id="sendButton" style="flex: 0.25;">发送</button>
-    </div>
-
-    <div class="div-container">
-      <button id="adjustment" style="flex: 0.25;">校准</button>
-      <button id="adjustmentStop" style="flex: 0.25;">校准结束</button>
-      <button id="pwm_test" style="flex: 0.25;">PWM</button>
     </div>
 
     <div class="div-container">

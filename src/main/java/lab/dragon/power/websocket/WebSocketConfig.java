@@ -1,4 +1,4 @@
-package lab.dragon.websocket;
+package lab.dragon.power.websocket;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

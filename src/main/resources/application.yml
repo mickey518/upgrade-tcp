@@ -1,7 +1,7 @@
 version: '@project.version@'
 spring:
   application:
-    name: a-721
+    name: power
   servlet:
     multipart:
       max-file-size: 5MB

@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>a721</artifactId>
-    <version>1.2</version>
+    <artifactId>power</artifactId>
+    <version>1.0</version>
 
     <parent>
         <groupId>lab.dragon</groupId>
@@ -17,15 +17,16 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <main-class>lab.dragon.Main</main-class>
+        <main-class>lab.dragon.power.Main</main-class>
+        <spring-boot-maven-outputDirectory>./program</spring-boot-maven-outputDirectory>
         <netty.version>4.1.115.Final</netty.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.boot</groupId>-->
+<!--            <artifactId>spring-boot-starter-web</artifactId>-->
+<!--        </dependency>-->
         <!-- webSocket -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -43,25 +44,14 @@
         </dependency>
 
         <!-- netty -->
-<!--        <dependency>-->
-<!--            <groupId>io.netty</groupId>-->
-<!--            <artifactId>netty-buffer</artifactId>-->
-<!--        </dependency>-->
-
-        <!-- modbus start -->
         <dependency>
-            <groupId>com.fazecast</groupId>
-            <artifactId>jSerialComm</artifactId>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.infiniteautomation</groupId>
-            <artifactId>modbus4j</artifactId>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.github.java-native</groupId>
-            <artifactId>jssc</artifactId>
-        </dependency>
-        <!-- modbus end -->
     </dependencies>
 
     <build>
