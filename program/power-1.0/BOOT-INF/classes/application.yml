@@ -1,0 +1,30 @@
+version: '@project.version@'
+spring:
+  application:
+    name: power
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+server:
+  # 程序API接口启动端口号
+  port: 4000
+logging:
+  charset:
+    file: utf-8
+    console: utf-8
+  level:
+    root: info
+    com:
+      serotonin: info
+  file:
+    name: logs/${spring.application.name}.log
+  pattern:
+    console: "${CONSOLE_LOG_PATTERN:%clr(%d{${LOG_DATEFORMAT_PATTERN:HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(---){faint} %clr([%15.15t]){faint} %clr(%40.40(%logger-%line){39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%file:%line] :: %msg%n"
+  logback:
+    rollingpolicy:
+      clean-history-on-start: false
+      max-file-size: 10MB
+      total-size-cap: 50GB
+      max-history: 1000
