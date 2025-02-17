@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>远程升级-串口</title>
+  <style>
+    /* 页面样式 */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 95vh;
+      margin: 0;
+      color: #e0e0e0;
+    }
+
+    h1 {
+      color: #e0e0e0;
+      text-align: center;
+    }
+
+    /* 外部容器 */
+    .container {
+      min-width: 800px;
+      max-width: 1080px;
+      width: 100%;
+      padding: 20px;
+      margin-top: 10px;
+      background-color: #1e1e1e;
+      /* 深色背景 */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    /* 外部容器 */
+    .div-container {
+      width: 70%;
+      padding: 0 15%;
+      display: flex;
+      align-items: center;
+    }
+
+    select {
+      width: 75%;
+      height: 40px;
+      background-color: #444;
+      /* 深色按钮背景 */
+      color: white;
+      border: 1px solid #4d4d4d;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin: 5px 30px 5px 0;
+    }
+    select option {
+      width: 75%;
+      height: 10px;
+      background-color: #555;
+      /* 深色按钮背景 */
+      color: white;
+      border: 1px solid #4d4d4d;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin: 5px 30px 5px 0;
+    }
+
+    /* 输入框样式 */
+    input[type="text"] {
+      height: 36px;
+      /* padding: 1% 1% 1% 1%; */
+      margin: 10px 0px 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #555;
+      /* 深色边框 */
+      outline: none;
+      background-color: #333;
+      /* 深色背景 */
+      color: #e0e0e0;
+      /* 浅色文字 */
+      transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: #66afe9;
+      box-shadow: -1px 0px 8px rgba(102, 175, 233, 0.6);
+    }
+
+    /* 文件上传输入框样式 */
+    input[type="file"] {
+      font-size: 16px;
+      /* 深色背景 */
+      cursor: pointer;
+      color: #e0e0e0;
+      /* 浅色文字 */
+      transition: all 0.3s ease;
+    }
+
+    input[type="file"]:focus {
+      /* border-color: #66afe9; */
+      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+    }
+
+    /* 自定义上传按钮 */
+    input[type="file"]::-webkit-file-upload-button {
+      background-color: #333;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    input[type="file"]::-webkit-file-upload-button:hover {
+      background-color: #666;
+      /* 按钮悬停效果 */
+    }
+
+    .inputBorderGray {
+      border: 1px solid #333;
+    }
+
+    .inputBorderGreen {
+      border: 1px solid #20d31a;
+    }
+
+    .inputBorderRed {
+      border: 1px solid #ff0000;
+    }
+
+    .select-file-container {
+      background-color: #333;
+      border-radius: 5px;
+      padding: 0px 5px 0px 10px;
+      margin: 5px 5px 5px 0px;
+      /* flex: 0.75; */
+    }
+
+    .left-label {
+      font-size: 16px;
+      align-items: center;
+    }
+
+    /* 按钮样式 */
+    button {
+      width: 20%;
+      height: 40px;
+      background-color: #444;
+      /* 深色按钮背景 */
+      color: white;
+      border: 1px solid #4d4d4d;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin: 5px 30px 5px 0;
+    }
+
+    button:hover {
+      background-color: #847e7e;
+      /* 按钮悬停效果 */
+    }
+
+    #messageInput {
+      width: 30%;
+      border: 1px solid #333;
+      margin: 10px 0px 5px 0;
+      padding: 8px;
+      font-size: 16px;
+      border-radius: 5px 0 0 5px;
+      /* 左边圆角 */
+    }
+
+    #sendButton {
+      border: 1px solid #333;
+      height: 54px;
+      padding: 8px 16px;
+      margin: 10px 10px 5px 0;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      border-radius: 0 5px 5px 0;
+    }
+
+    #sendButton:hover {
+      background-color: #45a049;
+      /* border-color: #66afe9; */
+      box-shadow: 2px 0 10px rgba(102, 175, 233, 0.6);
+    }
+
+    /* 日志区域样式 */
+    #log {
+      margin-top: 20px;
+      border: 1px solid #444;
+      /* 深色边框 */
+      height: 410px;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #222;
+      /* 深色背景 */
+      border-radius: 5px;
+      text-align: left;
+      font-size: 14px;
+      color: #e0e0e0;
+      /* 浅色文字 */
+    }
+  </style>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      let ws;
+      let wsConnected = false;
+      let driveFile;
+      let mainFile;
+      let logLines = 0;
+      const chunkSize = 1024 * 8;  // 每块 8 KB
+
+      let selectDriveFileElement = document.getElementById("select-drive-file");
+      let upgradeButtonElement = document.getElementById("upgradeButton");
+      let driveUpgradeStatusSpanElement = document.getElementById("driveUpgradeStatusSpan");
+
+      let selectMainFileElement = document.getElementById("select-main-file");
+      let upgradeMainButtonElement = document.getElementById("upgradeMainButton");
+      let mainUpgradeStatusSpanElement = document.getElementById("mainUpgradeStatusSpan");
+
+      let logMessageElement = document.getElementById("log");
+      let scrollCheckBoxElement = document.getElementById("autoScroll");
+      let clicked = "";
+
+      let selectElement = document.getElementById("selected-port");
+
+      async function createWebSocketAsync() {
+        return new Promise((resolve, reject) => {
+          const wsUrl = "ws://127.0.0.1:4000/ws-firmware-upgrade";
+
+          ws = new WebSocket(wsUrl);
+
+          ws.onopen = function () {
+            wsConnected = true;
+            logMessage("连接已打开");
+            resolve(wsConnected);
+          };
+
+          ws.onclose = function () {
+            wsConnected = false;
+            driveFile = null;
+            selectDriveFileElement.value = null;
+            selectDriveFileElement.parentNode.classList.remove("inputBorderRed");
+            selectDriveFileElement.parentNode.classList.remove("inputBorderGreen");
+            driveUpgradeStatusSpanElement.innerText = "";
+            mainFile = null;
+            selectMainFileElement.value = null;
+            selectMainFileElement.parentNode.classList.remove("inputBorderRed");
+            selectMainFileElement.parentNode.classList.remove("inputBorderGreen");
+            mainUpgradeStatusSpanElement.innerText = "";
+            logMessage("连接已关闭");
+          };
+
+          ws.onerror = function (error) {
+            logMessage("发生错误: " + error);
+          };
+
+          ws.onmessage = function (event) {
+            if (event.data.indexOf(";;") > -1) {
+              const strArr = event.data.split(";;");
+              switch (strArr[0]) {
+                case "UPGRADE_DRIVE_START":
+                  upgradeButtonElement.classList.add("disabledButton");
+                  upgradeButtonElement.disabled = true;
+                  driveUpgradeStatusSpanElement.innerText = "升级中";
+                  break;
+                case "UPGRADE_DRIVE_COMPLETE":
+                  upgradeButtonElement.classList.remove("disabledButton");
+                  upgradeButtonElement.disabled = false;
+                  driveUpgradeStatusSpanElement.innerText = "升级完成";
+                  break;
+                case "UPGRADE_DRIVE_PERCENTAGE":
+                  driveUpgradeStatusSpanElement.innerText = "升级中 " + strArr[1];
+                  break;
+                case "SEND_DRIVE_PARAMETER_START":
+                  upgradeButtonElement.classList.add("disabledButton");
+                  upgradeButtonElement.disabled = true;
+                  driveUpgradeStatusSpanElement.innerText = "下发参数";
+                  break;
+                case "SEND_DRIVE_PARAMETER_COMPLETE":
+                  upgradeButtonElement.classList.remove("disabledButton");
+                  upgradeButtonElement.disabled = false;
+                  driveUpgradeStatusSpanElement.innerText = "参数下发完成";
+                  break;
+                case "SEND_DRIVE_PARAMETER_PERCENTAGE":
+                  driveUpgradeStatusSpanElement.innerText = "下发参数 " + strArr[1];
+                  break;
+                case "UPGRADE_MAIN_START":
+                  upgradeMainButtonElement.classList.add("disabledButton");
+                  upgradeMainButtonElement.disabled = true;
+                  mainUpgradeStatusSpanElement.innerText = "升级中";
+                  break;
+                case "UPGRADE_MAIN_COMPLETE":
+                  upgradeMainButtonElement.classList.remove("disabledButton");
+                  upgradeMainButtonElement.disabled = false;
+                  mainUpgradeStatusSpanElement.innerText = "升级完成";
+                  break;
+                case "UPGRADE_MAIN_PERCENTAGE":
+                  mainUpgradeStatusSpanElement.innerText = "升级中 " + strArr[1];
+                  break;
+                case "SEND_MAIN_PARAMETER_START":
+                  upgradeMainButtonElement.classList.add("disabledButton");
+                  upgradeMainButtonElement.disabled = true;
+                  mainUpgradeStatusSpanElement.innerText = "下发参数";
+                  break;
+                case "SEND_MAIN_PARAMETER_COMPLETE":
+                  upgradeMainButtonElement.classList.remove("disabledButton");
+                  upgradeMainButtonElement.disabled = false;
+                  mainUpgradeStatusSpanElement.innerText = "参数下发完成";
+                  break;
+                case "SEND_MAIN_PARAMETER_PERCENTAGE":
+                  mainUpgradeStatusSpanElement.innerText = "下发参数 " + strArr[1];
+                  break;
+                case "PORTS":
+                  // 解析字符串，并去掉空项
+                  const ports = strArr[1].split(",").filter(item => item.trim() !== "");
+                  // 清空已有的 options 选项
+                  selectElement.innerHTML = "";
+
+                  // 添加新的 options
+                  ports.forEach(item => {
+                    const option = document.createElement("option");
+                    option.value = item.trim();
+                    option.textContent = item.trim();
+                    selectElement.appendChild(option);
+                  })
+                  break;
+              }
+            } else {
+              logMessage(event.data);
+            }
+
+          };
+        });
+      }
+
+      createWebSocketAsync();
+
+      // 发送消息
+      document
+        .getElementById("sendButton")
+        .addEventListener("click", function () {
+          const message = document.getElementById("messageInput").value;
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            logMessage("发送命令>>>: " + message);
+          } else {
+            logMessage("连接未打开");
+          }
+        });
+
+      let date = new Date();
+
+      // 显示日志信息
+      function logMessage(message) {
+        // 判断日志行数是不是太多了
+        if (logLines >= 100 && !scrollCheckBoxElement.checked) {
+          const lines = logMessageElement.innerHTML.split("<br>");
+          // 删除第一行
+          lines.shift();
+          // 重新设置内容
+          logMessageElement.innerHTML = lines.join("<br>");
+
+          logLines = 99;
+        }
+        date = new Date();
+        const hourStr = date.getHours() >= 10 ? date.getHours() : "0" + date.getHours();
+        const minuStr = date.getMinutes() >= 10 ? date.getMinutes() : "0" + date.getMinutes();
+        const secoStr = date.getSeconds() >= 10 ? date.getSeconds() : "0" + date.getSeconds();
+
+        const dateStr = hourStr + ":" + minuStr + ":" + secoStr;
+        logMessageElement.innerHTML += dateStr + " " + message + "<br>";
+        logLines++;
+
+        if (scrollCheckBoxElement.checked) {
+          logMessageElement.scrollTop = logMessageElement.scrollHeight; // 滚动到最新消息
+        }
+      }
+
+      function cleanLog() {
+        logMessageElement.innerHTML = "";
+        logLines = 0;
+      }
+
+      async function uploadDriveFileAsync(selectFile) {
+        let a;
+        if (!wsConnected) {
+          a = await createWebSocketAsync();
+        }
+
+        driveFile = selectFile;
+        if (driveFile && wsConnected) {
+          logMessage("驱动板文件选中：" + driveFile.name + "；文件大小：" + driveFile.size);
+          ws.send("UPLOAD_DRIVE_START;");
+          driveUpgradeStatusSpanElement.innerText = "文件上传中";
+          // 将文件分成小块
+          const totalChunks = Math.ceil(driveFile.size / chunkSize);
+
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, driveFile.size);
+            const chunk = driveFile.slice(start, end);
+            ws.send(chunk);
+          }
+
+          ws.send("UPLOAD_DRIVE_COMPLETE;" + driveFile.size);
+          driveUpgradeStatusSpanElement.innerText = "上传完成";
+        }
+      }
+
+      // 上传远程升级文件
+      selectDriveFileElement.addEventListener("change", function (event) {
+        selectDriveFileElement.parentNode.classList.remove("inputBorderRed");
+        selectDriveFileElement.parentNode.classList.remove("inputBorderGreen");
+        driveUpgradeStatusSpanElement.innerText = "";
+        uploadDriveFileAsync(event.target.files[0]);
+        if (event.target.files.length > 0) {
+          selectDriveFileElement.parentNode.classList.add("inputBorderGreen");
+        }
+      });
+
+      // 驱动板升级
+      upgradeButtonElement.addEventListener("click", function () {
+        if (!wsConnected) {
+          logMessage("连接未打开！！！");
+          return;
+        }
+        if (!driveFile) {
+          logMessage("未选择驱动板升级文件");
+          driveUpgradeStatusSpanElement.innerText = "未选择升级文件";
+          selectDriveFileElement.parentNode.classList.add("inputBorderRed");
+          return;
+        }
+
+        // 下发命令05，开始升级驱动板
+        ws.send("UPGRADE_DRIVE;05");
+      });
+
+
+      async function uploadMainFileAsync(selectFile) {
+        let a;
+        if (!wsConnected) {
+          a = await createWebSocketAsync();
+        }
+
+        mainFile = selectFile;
+        if (mainFile && wsConnected) {
+          logMessage("主控板文件选中：" + mainFile.name + "；文件大小：" + mainFile.size);
+          ws.send("UPLOAD_MAIN_START;");
+          mainUpgradeStatusSpanElement.innerText = "文件上传中";
+          // 将文件分成小块
+          const totalChunks = Math.ceil(mainFile.size / chunkSize);
+
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, mainFile.size);
+            const chunk = mainFile.slice(start, end);
+            ws.send(chunk);
+          }
+
+          ws.send("UPLOAD_MAIN_COMPLETE;" + mainFile.size);
+          mainUpgradeStatusSpanElement.innerText = "上传完成";
+        }
+      }
+
+      // 上传远程升级文件
+      selectMainFileElement.addEventListener("change", function (event) {
+        selectMainFileElement.parentNode.classList.remove("inputBorderRed");
+        selectMainFileElement.parentNode.classList.remove("inputBorderGreen");
+        mainUpgradeStatusSpanElement.innerText = "";
+        uploadMainFileAsync(event.target.files[0]);
+        if (event.target.files.length > 0) {
+          selectMainFileElement.parentNode.classList.add("inputBorderGreen");
+        }
+      });
+
+      // 升级主控板
+      upgradeMainButtonElement
+        .addEventListener("click", function () {
+          if (!wsConnected) {
+            logMessage("连接未打开！！！");
+            return;
+          }
+          if (!mainFile) {
+            logMessage("未选择主控板升级文件");
+            mainUpgradeStatusSpanElement.innerText = "未选择升级文件";
+            selectMainFileElement.parentNode.classList.add("inputBorderRed");
+            return;
+          }
+
+          // 下发命令0C，开始升级主控板
+          ws.send("UPGRADE_MAIN;0C");
+        });
+
+      document.getElementById("logClear").addEventListener("click", () => cleanLog());
+
+      document.getElementById("open-port").addEventListener("click", () => {
+        const selectedPortValue = document.getElementById("selected-port").value;
+        ws.send("OPEN_PORT;" + selectedPortValue);
+      });
+
+      document.getElementById("bootloader").addEventListener("click", () => {
+        ws.send("BOOTLOADER;");
+      });
+
+      document.getElementById("close-port").addEventListener("click", () => {
+        ws.send("CLOSE_PORT;");
+      });
+
+    });
+  </script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>固件升级 -- 串口版</h1>
+
+    <div class="div-container">
+      <label style="flex: 0.2;">
+        <select id="selected-port">
+          <option>COM3</option>
+        </select>
+      </label>
+      <button id="open-port" style="flex: 0.2;">打开</button>
+      <button id="bootloader" style="flex: 0.2;">bootloader</button>
+      <button id="close-port" style="flex: 0.2;">关闭</button>
+    </div>
+
+    <div class="div-container">
+      <div class="select-file-container inputBorderGray" style="flex: 0.6;">
+        <span class="left-label" style="flex: 0.1;">PMC：</span>
+        <input type="file" id="select-drive-file" />
+      </div>
+      <button id="upgradeButton" style="flex: 0.2;">升级</button>
+      <span id="driveUpgradeStatusSpan" style="flex: 0.2;"></span>
+    </div>
+
+    <div class="div-container">
+      <div class="select-file-container inputBorderGray" style="flex: 0.6;">
+        <span class="left-label" style="flex: 0.1;">Monitor：</span>
+        <input type="file" id="select-main-file" />
+      </div>
+      <button id="upgradeMainButton" style="flex: 0.2;">升级</button>
+      <span id="mainUpgradeStatusSpan" style="flex: 0.2;"></span>
+    </div>
+
+    <div class="div-container">
+      <input type="text" id="messageInput" style="flex: 0.5;" placeholder="输入命令" />
+      <button id="sendButton" style="flex: 0.25;">发送</button>
+    </div>
+
+    <div class="div-container">
+      <button id="logClear" style="flex: 0.25;">清空日志</button>
+      <label for="autoScroll">自动滚动</label><input id="autoScroll" type="checkbox" checked />
+      <label id="logMessageLines"></label>
+    </div>
+    <div id="log"></div>
+  </div>
+</body>
+
+</html>

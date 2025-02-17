@@ -1,9 +1,12 @@
 package lab.dragon.power.api;
 
+import com.fazecast.jSerialComm.SerialPort;
+import lab.dragon.common.gson.GsonUtils;
 import lab.dragon.common.util.ByteUtils;
 import lab.dragon.common.util.CRC32MPEG2;
 import lab.dragon.common.util.ThreadPoolUtil;
-import lab.dragon.power.handler.DeviceUpgradeHandler;
+import lab.dragon.power.DataCenter;
+import lab.dragon.power.handler.com.RtuMasterHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +17,6 @@ import javax.websocket.server.ServerEndpoint;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * WebSocket 服务端，用于处理文件上传、固件升级等操作。
@@ -23,13 +25,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 @ServerEndpoint("/ws-firmware-upgrade") // WebSocket端点的路径
 public class FirmwareUpgradeWebSocket {
     // WebSocket发送数据队列，用于缓存发送给客户端的消息
-    public static final LinkedBlockingQueue<String> SEND_MESSAGE_QUEUE = new LinkedBlockingQueue<>();
     private static final Logger log = LoggerFactory.getLogger(FirmwareUpgradeWebSocket.class);
 
     // 驱动板文件流
-    private final ThreadLocal<ByteArrayOutputStream> driveFileStreamLocal = ThreadLocal.withInitial(ByteArrayOutputStream::new);
+    private final ByteArrayOutputStream driveFileStream = new ByteArrayOutputStream();
     // 主控板文件流
-    private final ThreadLocal<ByteArrayOutputStream> mainFileStreamLocal = ThreadLocal.withInitial(ByteArrayOutputStream::new);
+    private final ByteArrayOutputStream mainFileStream = new ByteArrayOutputStream();
 
     // 当前WebSocket连接的session
     private Session session;
@@ -43,9 +44,8 @@ public class FirmwareUpgradeWebSocket {
     private byte[] mainFile = null;
     // 定时任务，用于定时发送缓存的消息
     private Future<?> scheduleSendTestFuture;
-    // 用于TCP操作的帮助类
-    private DeviceUpgradeHandler deviceUpgradeHandler;
 
+    private RtuMasterHelper rtuMasterHelper;
 
     /**
      * WebSocket连接打开时调用的方法
@@ -55,6 +55,7 @@ public class FirmwareUpgradeWebSocket {
     @OnOpen
     public void onOpen(Session session) {
         this.session = session;
+        System.out.println("sout输出下中文，打开ws");
 
         // 监听消息队列并发送
         this.scheduleSendTestFuture = ThreadPoolUtil.getScheduledExecutor().submit(() -> {
@@ -63,7 +64,7 @@ public class FirmwareUpgradeWebSocket {
                 String take;
                 try {
                     // Take a message from the queue and send it to the client
-                    take = SEND_MESSAGE_QUEUE.take();
+                    take = DataCenter.SEND_MESSAGE_QUEUE.take();
                     if (session != null && session.isOpen()) {
                         session.getBasicRemote().sendText(take);
                     }
@@ -78,8 +79,15 @@ public class FirmwareUpgradeWebSocket {
             }
         });
 
-        // 初始化TcpHelper实例
-        this.deviceUpgradeHandler = DeviceUpgradeHandler.getInstance(8000);
+        // 初始化实例
+        this.rtuMasterHelper = RtuMasterHelper.createMaster();
+
+        StringBuilder tmpMsg = new StringBuilder("PORTS;;");
+        SerialPort[] ports = SerialPort.getCommPorts();
+        for (SerialPort port : ports) {
+            tmpMsg.append(port.getSystemPortName()).append(",");
+        }
+        DataCenter.SEND_MESSAGE_QUEUE.add(tmpMsg.toString());
     }
 
     /**
@@ -100,12 +108,11 @@ public class FirmwareUpgradeWebSocket {
             } else {
                 byte[] command = ByteUtils.parseHexBinary(msg.replaceAll(" ", ""));
                 command[2] = 0;
-                deviceUpgradeHandler.writeCommand(command);
+                rtuMasterHelper.writeCommand(command);
             }
         } catch (Exception e) {
-            DeviceUpgradeHandler.isContinued.set(false);
             log.error("处理消息时发生异常", e);
-            SEND_MESSAGE_QUEUE.add("下发命令失败");
+            DataCenter.SEND_MESSAGE_QUEUE.add("下发命令失败");
         }
     }
 
@@ -136,6 +143,15 @@ public class FirmwareUpgradeWebSocket {
             case "UPGRADE_MAIN":
                 upgradeFile(false);
                 break;
+            case "OPEN_PORT":
+                rtuMasterHelper.openPort(split[1]);
+                break;
+            case "CLOSE_PORT":
+                rtuMasterHelper.closePort();
+                break;
+            case "BOOTLOADER":
+                rtuMasterHelper.intoBootloader();
+                break;
             default:
                 log.warn("未知指令: {}", split[0]);
         }
@@ -148,11 +164,11 @@ public class FirmwareUpgradeWebSocket {
      */
     private void startFileUpload(boolean isDrive) {
         if (isDrive) {
-            driveFileStreamLocal.get().reset();
+            driveFileStream.reset();
             driveFile = null;
             driveFileUploading = true;
         } else {
-            mainFileStreamLocal.get().reset();
+            mainFileStream.reset();
             mainFile = null;
             mainFileUploading = true;
         }
@@ -166,12 +182,12 @@ public class FirmwareUpgradeWebSocket {
      */
     private void completeFileUpload(boolean isDrive, String[] split) {
         if (isDrive) {
-            driveFile = driveFileStreamLocal.get().toByteArray();
+            driveFile = driveFileStream.toByteArray();
             driveFileUploading = false;
             log.info("驱动板升级文件接收完成，文件大小: {}", driveFile.length);
             checkFileSize(split[1], driveFile.length, "驱动板");
         } else {
-            mainFile = mainFileStreamLocal.get().toByteArray();
+            mainFile = mainFileStream.toByteArray();
             mainFileUploading = false;
             log.info("主控板升级文件接收完成，文件大小: {}", mainFile.length);
             checkFileSize(split[1], mainFile.length, "主控板");
@@ -187,9 +203,9 @@ public class FirmwareUpgradeWebSocket {
      */
     private void checkFileSize(String expectedSize, int actualSize, String fileType) {
         if (Integer.parseInt(expectedSize) != actualSize) {
-            SEND_MESSAGE_QUEUE.add(fileType + "升级文件上传失败，文件大小异常；应为：" + expectedSize + "，实际接收到 " + actualSize);
+            DataCenter.SEND_MESSAGE_QUEUE.add(fileType + "升级文件上传失败，文件大小异常；应为：" + expectedSize + "，实际接收到 " + actualSize);
         } else {
-            SEND_MESSAGE_QUEUE.add(fileType + "升级文件上传成功");
+            DataCenter.SEND_MESSAGE_QUEUE.add(fileType + "升级文件上传成功");
         }
     }
 
@@ -200,19 +216,19 @@ public class FirmwareUpgradeWebSocket {
      */
     private void upgradeFile(boolean isDrive) throws IOException {
         if (isDrive) {
-            SEND_MESSAGE_QUEUE.add("UPGRADE_DRIVE_START;;" + driveFileUploading);
-            deviceUpgradeHandler.startUpgradeDrive((byte) 0x05, driveFile.length);
-            deviceUpgradeHandler.sendUpgradeFile(driveFile, (byte) 0x06);
+            DataCenter.SEND_MESSAGE_QUEUE.add("UPGRADE_DRIVE_START;;" + driveFileUploading);
+            rtuMasterHelper.startUpgradeDrive((byte) 0x03, driveFile.length);
+            rtuMasterHelper.sendUpgradeFile(driveFile, (byte) 0x04);
             int crc32Value = CRC32MPEG2.computeCRC32MPEG2LittleEndian(driveFile);
-            deviceUpgradeHandler.finishedUpgradeDrive((byte) 0x07, crc32Value);
-            SEND_MESSAGE_QUEUE.add("UPGRADE_DRIVE_COMPLETE;;" + driveFileUploading);
+            rtuMasterHelper.finishedUpgradeDrive((byte) 0x05, crc32Value);
+            DataCenter.SEND_MESSAGE_QUEUE.add("UPGRADE_DRIVE_COMPLETE;;" + driveFileUploading);
         } else {
-            SEND_MESSAGE_QUEUE.add("UPGRADE_MAIN_START;;" + mainFileUploading);
-            deviceUpgradeHandler.startUpgradeDrive((byte) 0x0C, mainFile.length);
-            deviceUpgradeHandler.sendUpgradeFile(mainFile, (byte) 0x0D);
+            DataCenter.SEND_MESSAGE_QUEUE.add("UPGRADE_MAIN_START;;" + mainFileUploading);
+            rtuMasterHelper.startUpgradeDrive((byte) 0x06, mainFile.length);
+            rtuMasterHelper.sendUpgradeFile(mainFile, (byte) 0x07);
             int crc32Value = CRC32MPEG2.computeCRC32MPEG2LittleEndian(mainFile);
-            deviceUpgradeHandler.finishedUpgradeDrive((byte) 0x0E, crc32Value);
-            SEND_MESSAGE_QUEUE.add("UPGRADE_MAIN_COMPLETE;;" + mainFileUploading);
+            rtuMasterHelper.finishedUpgradeDrive((byte) 0x08, crc32Value);
+            DataCenter.SEND_MESSAGE_QUEUE.add("UPGRADE_MAIN_COMPLETE;;" + mainFileUploading);
         }
     }
 
@@ -225,14 +241,13 @@ public class FirmwareUpgradeWebSocket {
      */
     @OnMessage
     public void onMessage(Session session, byte[] fileData, boolean last) throws IOException {
-        log.info("last: {}", last);
-
+        log.info("driveFileUploading: {}, file size: {}; mainFileUploading: {}", driveFileUploading, fileData.length, mainFileUploading);
         // 写入文件流
         if (driveFileUploading) {
-            driveFileStreamLocal.get().write(fileData);
+            driveFileStream.write(fileData);
         }
         if (mainFileUploading) {
-            mainFileStreamLocal.get().write(fileData);
+            mainFileStream.write(fileData);
         }
     }
 
@@ -260,8 +275,8 @@ public class FirmwareUpgradeWebSocket {
         }
 
         // 重置文件流和相关状态
-        driveFileStreamLocal.remove();
-        mainFileStreamLocal.remove();
+        driveFileStream.reset();
+        mainFileStream.reset();
         driveFile = null;
         mainFile = null;
         driveFileUploading = false;
@@ -269,7 +284,6 @@ public class FirmwareUpgradeWebSocket {
 
         log.info("[ws]断开连接：{}", this.session.getId());
         try {
-            DeviceUpgradeHandler.isContinued.set(false);
             // 关闭WebSocket连接
             if (this.session != null && this.session.isOpen()) {
                 this.session.close();

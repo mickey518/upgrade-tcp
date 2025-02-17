@@ -52,6 +52,12 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-codec</artifactId>
         </dependency>
+
+        <!-- comm -->
+        <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
