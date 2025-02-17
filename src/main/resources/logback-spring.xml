@@ -2,11 +2,12 @@
 <configuration debug="false">
 
     <springProperty scope="context" name="LOG_HOME" source="logging.path" default="logs"/>
+
     <!-- 控制台输出 -->
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} %line - %msg%n</pattern>
-            <charset class="java.nio.charset.Charset">UTF-8</charset>
+            <charset>GBK</charset>
         </encoder>
     </appender>
 
@@ -22,13 +23,13 @@
         </rollingPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} %line - %msg%n</pattern>
-            <charset class="java.nio.charset.Charset">UTF-8</charset>
+            <charset>GBK</charset>
         </encoder>
     </appender>
 
     <!-- 日志输出级别 -->
     <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="STDOUT"/>
         <appender-ref ref="FILE"/>
     </root>
 </configuration>
