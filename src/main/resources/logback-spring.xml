@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+
+    <springProperty scope="context" name="LOG_HOME" source="logging.path" default="logs"/>
+    <!-- 控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} %line - %msg%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 按照每天生成日志文件 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/upgrade-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!-- each file should be at most 100MB, keep 60 days worth of history, but at most 5GB -->
+            <cleanHistoryOnStart>false</cleanHistoryOnStart>
+            <maxFileSize>5MB</maxFileSize>
+            <maxHistory>300</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} %line - %msg%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 日志输出级别 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>
